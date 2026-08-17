@@ -28,10 +28,13 @@ unit-testable without a GUI, a transport, or TCC.
 Adapt the templates from `apple-skills:guide-macos-spm-packaging` rather than
 writing packaging from scratch:
 
-- `Scripts/setup_dev_signing.sh` — create the long-lived signing identity once
-  (Developer ID, or a fixed self-signed keychain identity per parent decision
-  O2). Run once per machine; the identity must then never be regenerated, since
-  regenerating it is precisely what breaks TCC grants.
+- `Scripts/setup_dev_signing.sh` — create the long-lived signing identity once: a
+  fixed self-signed keychain identity, since there is no paid Apple Developer
+  account (parent O2). Run once per machine; the identity must then never be
+  regenerated, since regenerating it is precisely what breaks TCC grants. The
+  script is idempotent and refuses to overwrite an existing identity, because the
+  destructive failure mode here is silent — a regenerated certificate does not
+  error, it just quietly invalidates every permission the user has granted.
 - `Scripts/package_app.sh` — build with `swift build -c release`, assemble
   `Pippin.app/Contents/{MacOS,Resources,Info.plist}`, sign with the stable
   identity. `MENU_BAR_APP=1` emits `LSUIElement`.
@@ -68,8 +71,26 @@ Publish whatever was actually bound to `endpoint.json`. Never fail to start over
 a port conflict.
 
 **Validators** (via the SDK's `HTTPRequestValidator` pipeline):
-1. bearer-token equality check → 401
+1. bearer-token lookup → 401 on miss
 2. `Origin` absent or loopback → otherwise reject
+
+**Token model, shaped for tiers (S9).** Validation resolves a presented token to
+a *capability set*, not to a boolean:
+
+```
+TokenStore: token → TokenIdentity { label, capabilities }
+Capabilities: read | write | destructive        (a set, not a flag)
+```
+
+Batch one provisions exactly one token, whose capability set is "all three". The
+registry already derives the tool list from `(config, capabilities)` rather than
+from config alone, so batch four's remote read-only token needs a new row in the
+store and nothing else. The cost today is one parameter threaded through the
+registry; the cost of retrofitting it later is every call site that assumed a
+single omnipotent caller.
+
+This is intentionally *not* a permission system yet — no minting UI, no
+revocation, no persistence of multiple tokens. Only the shape.
 
 **Bind validation:** `config.http.bind` is parsed and required to be a loopback
 address. Anything else is a startup error with an explicit message. Constraint C1
@@ -90,10 +111,15 @@ The shim never parses or rewrites payloads. Keeping it a dumb pipe is what makes
 
 ## 5. Tool Registry
 
-The registry is a pure function of config: `Config → [Tool]`. Testable with no
-transport. Registration for each tool declares name, terse description
+The registry is a pure function: `(Config, Capabilities) → [Tool]`. Testable with
+no transport. Registration for each tool declares name, terse description
 (≤ 200 characters), input schema, optional output schema, annotations, and
 whether it is a write or destructive verb.
+
+The `Capabilities` parameter is the S9 allowance. Batch one always passes the full
+set, so behaviour is identical to `Config → [Tool]`; the parameter exists so that
+a read-only token later yields a read-only tool list through the same code path
+rather than a bolted-on filter.
 
 Gating order: module disabled ⇒ contributes nothing; module enabled with writes
 off ⇒ contributes read-only tools only. Absent, never present-and-erroring

@@ -41,7 +41,8 @@ routing.
 
 ## Non-Requirements
 
-- No Mail writes of any kind. Batch two at the earliest.
+- No Mail writes of any kind. Scheduled for batch three (send, move, flag), under
+  the same two-phase protocol.
 - No full-text indexing of our own, and no Spotlight backend in this slice.
 - No attachment extraction.
 - No other mail clients.

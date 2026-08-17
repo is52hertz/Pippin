@@ -46,13 +46,22 @@ written against them.
 - **S8 — One proof tool.** `pippin_status` (read-only): version, bound port,
   enabled modules, and per-permission TCC state. It is both the transport smoke
   test and genuinely the tool the user will want when something is not working.
+- **S9 — Token model must not foreclose tiers.** Batch four adds multiple bearer
+  tokens with per-token permission tiers (a remote token sees read-only tools
+  only). Implement a single token now, but shape validation so that "N tokens,
+  each mapped to a tier" is a natural extension — do not hardcode
+  one-token-equals-full-access into the request path, the registry, or the config
+  schema. This is the only forward-looking allowance batch one owes batch four,
+  and it is cheap now and expensive later.
 
 ## Non-Requirements
 
 - No app modules. Reminders and Mail are separate children.
-- No escape hatch. Deferred to batch two.
-- No notarization or distribution. Local signing only.
+- No escape hatch. Deferred to batch three.
+- No notarization or distribution. Free-tier self-signing only, permanently (O2).
 - No auto-update mechanism.
+- No multi-token support, no permission tiers, no remote access. S9 only requires
+  that the design not foreclose them.
 
 ## Acceptance Criteria
 
@@ -82,11 +91,18 @@ written against them.
       AppleScript argument escaping, and the `tools/list` byte budget.
 - [ ] **AC10** GUI reviewed against HIG: standard controls, system materials, no
       custom chrome, correct menu bar behaviour for an `LSUIElement` app.
+- [ ] **AC11** Token validation is tier-ready: a token resolves to a capability
+      set rather than to a boolean, and adding a second token with a read-only
+      capability set requires no change to the request path or the registry.
+      Demonstrated by a unit test that registers two tokens with different
+      capability sets and asserts each sees a different tool list — even though
+      only one token is provisioned in practice. (S9.)
 
 ## Constraints and Notes
 
-- Depends on parent Open Decision **O1** (swift-sdk approval) and **O2**
-  (signing identity). Do not start until both are resolved.
+- Parent Open Decisions O1–O3 are resolved (`addendum-2026-08-18.md` §1): the
+  swift-sdk dependency is approved, signing uses the fixed self-signed keychain
+  identity, and the batch-one `tools/list` budget is 6 KB.
 - Lands before the Reminders and Mail children, which consume S7's primitives.
 - Never validate permission-dependent behaviour via `swift run`; only the signed
   bundle is a supported run path.

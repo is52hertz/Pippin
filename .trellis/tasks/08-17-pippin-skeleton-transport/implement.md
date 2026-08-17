@@ -1,7 +1,8 @@
 # Skeleton and Transport — Execution Plan
 
-Prerequisite: parent Open Decisions **O1** (swift-sdk dependency approval) and
-**O2** (signing identity) resolved. Do not begin step 1 before that.
+Prerequisites resolved (`../08-17-pippin-mcp-server/addendum-2026-08-18.md` §1):
+swift-sdk approved (O1); signing uses the fixed self-signed keychain identity, no
+Developer ID, no notarization (O2); batch-one `tools/list` budget is 6 KB (O3).
 
 Ordering: this child lands before `08-17-pippin-reminders-crud` and
 `08-17-pippin-mail-read-search`, which consume the primitives from step 5.
@@ -28,8 +29,10 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
 - Validation: `swift build && swift test` (trivially green).
 
 ### Step 2 — Packaging and signing
-- [ ] Adapt `setup_dev_signing.sh` from `apple-skills:guide-macos-spm-packaging`;
-      make it idempotent and refuse to overwrite an existing identity.
+- [ ] Adapt `setup_dev_signing.sh` from `apple-skills:guide-macos-spm-packaging`
+      for the self-signed path only; make it idempotent and refuse to overwrite an
+      existing identity. Drop the Developer ID and notarization branches — they
+      are permanently out of scope, and dead signing code here is a live footgun.
 - [ ] Adapt `package_app.sh` with `MENU_BAR_APP=1`, `version.env`, and the full
       `Info.plist` key set; place `pippin-shim` inside the bundle.
 - [ ] Adapt `compile_and_run.sh`.
@@ -52,11 +55,14 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
 ### Step 4 — Server, transport, validators
 - [ ] `ServerHost` actor owning server, registry, token store, audit log.
 - [ ] `StatefulHTTPServerTransport` on `127.0.0.1`; port fallback to ephemeral.
+- [ ] `TokenStore`: token → capability set. Provision one token with the full
+      set; thread the capability set through to the registry. AC11 / S9.
 - [ ] Bearer-token and Origin validators.
 - [ ] Publish `endpoint.json` at mode `0600`.
 - [ ] Register `pippin_status`.
 - Validation: `curl` the endpoint with correct token (succeeds), wrong token
-      (401), and a non-loopback `Origin` (rejected). AC5.
+      (401), and a non-loopback `Origin` (rejected). AC5. Plus the two-token unit
+      test from AC11, asserting different tool lists per capability set.
 
 ### Step 5 — Core safety primitives
 - [ ] `ConfirmTokenStore`: mint / validate / consume, TTL, single-use, ID-set
@@ -75,11 +81,13 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   reworking both module tasks.
 
 ### Step 6 — Tool registry and gating
-- [ ] `Config → [Tool]` as a pure function.
+- [ ] `(Config, Capabilities) → [Tool]` as a pure function.
 - [ ] Gating: disabled module contributes nothing; writes-off contributes
       read-only tools only.
 - [ ] Emit `notifications/tools/list_changed` on config change.
-- [ ] `tools/list` byte-budget test against the parent A3 figure.
+- [ ] `tools/list` byte-budget test against the parent A3 figure (6 KB batch one;
+      the skeleton alone should be far under it, so the test's job here is to
+      exist and be wired, ready for the module children to push against).
 - Validation: `swift test`; then live — toggle a module and confirm the client's
       tool list changes without restarting. AC6.
 

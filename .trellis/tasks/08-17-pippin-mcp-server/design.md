@@ -297,7 +297,7 @@ Sources/
 Tests/
 ```
 
-## 14. Reserved: Generic Escape Hatch (Batch Two)
+## 14. Reserved: Generic Escape Hatch (Batch Three)
 
 Design position is settled; implementation is deferred. It will add two tools to
 `PippinModules`:
