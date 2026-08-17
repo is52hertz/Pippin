@@ -1,0 +1,30 @@
+{
+  "id": "pippin-mcp-server",
+  "name": "pippin-mcp-server",
+  "title": "Pippin: macOS App-Ecosystem MCP Server",
+  "description": "Personal MCP server exposing macOS local apps to coding agents; parent task owning cross-module acceptance criteria",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "Teethe",
+  "assignee": "Teethe",
+  "createdAt": "2026-08-17",
+  "completedAt": null,
+  "branch": "feat/pippin-mcp-server",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "08-17-pippin-skeleton-transport",
+    "08-17-pippin-reminders-crud",
+    "08-17-pippin-mail-read-search"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

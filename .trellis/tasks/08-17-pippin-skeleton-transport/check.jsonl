@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/prd.md", "reason": "Cross-child acceptance criteria A1-A7 that this child feeds"}
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/design.md", "reason": "Invariants to verify against: loopback-only bind, no predicate delete, tool-absence gating, no silent empty results, no AppleScript string interpolation"}
