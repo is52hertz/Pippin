@@ -19,6 +19,7 @@ protocol ServerRuntimeServing: Sendable {
     func start() async throws -> AppRuntimeSnapshot
     func snapshot() async -> AppRuntimeSnapshot
     func updateConfig(_ config: Config) async throws -> AppRuntimeSnapshot
+    func performPermissionAction(_ action: PermissionAction) async throws -> AppRuntimeSnapshot
     func stop() async
 }
 
@@ -26,27 +27,29 @@ protocol ServerRuntimeServing: Sendable {
 actor ServerRuntime: ServerRuntimeServing {
     private let configURL: URL
     private let permissionProvider: any PermissionProviding
+    private let permissionActionPerformer: any PermissionActionPerforming
 
     private var state: AppRuntimeState = .starting
     private var failureDetail: String?
     private var host: ServerHost?
     private var listener: HTTPListener?
 
-    init(
-        configURL: URL = Config.defaultURL,
-        permissionProvider: any PermissionProviding = SystemPermissionProvider()
-    ) {
+    init(configURL: URL = Config.defaultURL) {
+        let permissions = SystemPermissionProvider()
         self.configURL = configURL
-        self.permissionProvider = permissionProvider
+        self.permissionProvider = permissions
+        self.permissionActionPerformer = permissions
     }
 
     init(
         configURL: URL,
         permissionProvider: any PermissionProviding,
+        permissionActionPerformer: any PermissionActionPerforming,
         runningHost: ServerHost
     ) {
         self.configURL = configURL
         self.permissionProvider = permissionProvider
+        self.permissionActionPerformer = permissionActionPerformer
         self.state = .running
         self.host = runningHost
     }
@@ -114,6 +117,13 @@ actor ServerRuntime: ServerRuntimeServing {
         try config.validate()
         try config.save(to: configURL)
         try await host.updateConfig(config)
+        return await snapshot()
+    }
+
+    func performPermissionAction(
+        _ action: PermissionAction
+    ) async throws -> AppRuntimeSnapshot {
+        try await permissionActionPerformer.perform(action)
         return await snapshot()
     }
 

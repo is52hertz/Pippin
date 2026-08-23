@@ -12,6 +12,12 @@ struct PippinApp: App {
             PippinMenuView(model: delegate.model)
         }
         .menuBarExtraStyle(.window)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                PippinSettingsButton()
+                    .keyboardShortcut(",", modifiers: .command)
+            }
+        }
 
         Settings {
             PippinSettingsView(model: delegate.model)

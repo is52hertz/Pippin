@@ -2,6 +2,17 @@ import Observation
 import PippinCore
 import PippinServer
 
+enum PresentedPermission: Sendable {
+    case reminders
+    case mailAutomation
+    case mailData
+}
+
+struct PermissionActionPresentation: Equatable, Sendable {
+    let action: PermissionAction
+    let title: String
+}
+
 /// One presentation mirror shared by the menu-bar and Settings scenes.
 /// The resident actors remain authoritative for server and permission state.
 @MainActor
@@ -20,6 +31,7 @@ final class PippinPresentationModel {
         fullDiskAccess: .unknown
     )
     private(set) var isApplyingConfig = false
+    private(set) var permissionActionInProgress: PermissionAction?
     private(set) var errorMessage: String?
 
     init(runtime: any ServerRuntimeServing) {
@@ -40,6 +52,68 @@ final class PippinPresentationModel {
 
     func refresh() async {
         apply(await runtime.snapshot())
+    }
+
+    func permissionAction(
+        for permission: PresentedPermission
+    ) -> PermissionActionPresentation? {
+        switch permission {
+        case .reminders:
+            switch permissions.reminders {
+            case .notDetermined:
+                PermissionActionPresentation(
+                    action: .requestRemindersAccess,
+                    title: "Request Access…"
+                )
+            case .denied, .restricted, .writeOnly:
+                PermissionActionPresentation(
+                    action: .openRemindersSettings,
+                    title: "Open Reminders…"
+                )
+            case .granted, .unavailable, .unknown:
+                nil
+            }
+        case .mailAutomation:
+            switch permissions.mailAutomation {
+            case .unavailable:
+                PermissionActionPresentation(action: .openMail, title: "Open Mail…")
+            case .notDetermined:
+                PermissionActionPresentation(
+                    action: .requestMailAutomationAccess,
+                    title: "Request Access…"
+                )
+            case .denied, .restricted:
+                PermissionActionPresentation(
+                    action: .openAutomationSettings,
+                    title: "Open Automation…"
+                )
+            case .writeOnly, .granted, .unknown:
+                nil
+            }
+        case .mailData:
+            PermissionActionPresentation(
+                action: .openFullDiskAccessSettings,
+                title: "Open Full Disk Access…"
+            )
+        }
+    }
+
+    func performPermissionAction(_ action: PermissionAction) async {
+        guard permissionActionInProgress == nil else { return }
+        permissionActionInProgress = action
+        defer { permissionActionInProgress = nil }
+
+        do {
+            apply(try await runtime.performPermissionAction(action))
+            errorMessage = nil
+        } catch is CancellationError {
+            apply(await runtime.snapshot())
+        } catch {
+            // Always refresh through the read-only path. A request result is not
+            // itself proof of the current permission state.
+            apply(await runtime.snapshot())
+            errorMessage = Self.userFacingDescription(for: error)
+        }
     }
 
     func setModuleEnabled(_ enabled: Bool, module: String) async {

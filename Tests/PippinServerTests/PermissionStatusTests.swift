@@ -39,6 +39,35 @@ struct PermissionStatusTests {
         #expect(SystemPermissionProvider.mailAutomationState(for: -9_999) == .unknown)
     }
 
+    @Test("permission request results map without claiming a grant")
+    func permissionRequestResultMapping() {
+        #expect(SystemPermissionProvider.remindersRequestError(granted: true) == nil)
+        #expect(
+            SystemPermissionProvider.remindersRequestError(granted: false)
+                == .remindersAccessNotGranted
+        )
+        #expect(SystemPermissionProvider.mailAutomationRequestError(for: noErr) == nil)
+        #expect(
+            SystemPermissionProvider.mailAutomationRequestError(
+                for: OSStatus(errAEEventNotPermitted)
+            ) == .mailAutomationAccessNotGranted
+        )
+        #expect(
+            SystemPermissionProvider.mailAutomationRequestError(
+                for: OSStatus(errAEEventWouldRequireUserConsent)
+            ) == .mailAutomationConsentNotCompleted
+        )
+        #expect(
+            SystemPermissionProvider.mailAutomationRequestError(
+                for: OSStatus(procNotFound)
+            ) == .mailNotRunning
+        )
+        #expect(
+            SystemPermissionProvider.mailAutomationRequestError(for: -9_999)
+                == .mailAutomationRequestFailed(-9_999)
+        )
+    }
+
     @Test("Mail not running is unavailable without an Apple Events probe")
     func mailNotRunning() async {
         #expect(

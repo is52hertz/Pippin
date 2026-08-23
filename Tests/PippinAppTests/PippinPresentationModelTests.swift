@@ -17,11 +17,24 @@ struct PippinPresentationModelTests {
     private actor TestRuntime: ServerRuntimeServing {
         var value: AppRuntimeSnapshot
         var updateError: PippinError?
+        var permissionActionError: PermissionActionError?
+        var permissionActionValue: AppRuntimeSnapshot?
         var updates: [Config] = []
+        var permissionActions: [PermissionAction] = []
+        let permissionActionGate: ActionGate?
 
-        init(value: AppRuntimeSnapshot, updateError: PippinError? = nil) {
+        init(
+            value: AppRuntimeSnapshot,
+            updateError: PippinError? = nil,
+            permissionActionError: PermissionActionError? = nil,
+            permissionActionValue: AppRuntimeSnapshot? = nil,
+            permissionActionGate: ActionGate? = nil
+        ) {
             self.value = value
             self.updateError = updateError
+            self.permissionActionError = permissionActionError
+            self.permissionActionValue = permissionActionValue
+            self.permissionActionGate = permissionActionGate
         }
 
         func start() async throws -> AppRuntimeSnapshot { value }
@@ -46,7 +59,71 @@ struct PippinPresentationModelTests {
             return value
         }
 
+        func performPermissionAction(
+            _ action: PermissionAction
+        ) async throws -> AppRuntimeSnapshot {
+            permissionActions.append(action)
+            if let permissionActionGate {
+                await permissionActionGate.wait()
+            }
+            if let permissionActionValue {
+                value = permissionActionValue
+            }
+            if let permissionActionError { throw permissionActionError }
+            return value
+        }
+
         func stop() async {}
+    }
+
+    private actor ActionGate {
+        private var actionStarted = false
+        private var startWaiter: CheckedContinuation<Void, Never>?
+        private var releaseWaiter: CheckedContinuation<Void, Never>?
+
+        func wait() async {
+            actionStarted = true
+            startWaiter?.resume()
+            startWaiter = nil
+            await withCheckedContinuation { releaseWaiter = $0 }
+        }
+
+        func waitUntilStarted() async {
+            guard actionStarted == false else { return }
+            await withCheckedContinuation { startWaiter = $0 }
+        }
+
+        func release() {
+            releaseWaiter?.resume()
+            releaseWaiter = nil
+        }
+    }
+
+    private actor TestPermissionService: PermissionProviding, PermissionActionPerforming {
+        var value: PermissionSnapshot
+        var valueAfterAction: PermissionSnapshot?
+        var actionError: PermissionActionError?
+        var actions: [PermissionAction] = []
+
+        init(
+            value: PermissionSnapshot,
+            valueAfterAction: PermissionSnapshot? = nil,
+            actionError: PermissionActionError? = nil
+        ) {
+            self.value = value
+            self.valueAfterAction = valueAfterAction
+            self.actionError = actionError
+        }
+
+        func currentPermissions() async -> PermissionSnapshot { value }
+
+        func perform(_ action: PermissionAction) async throws {
+            actions.append(action)
+            if let valueAfterAction {
+                value = valueAfterAction
+            }
+            if let actionError { throw actionError }
+        }
     }
 
     @Test("successful module update advances the mirror")
@@ -82,6 +159,184 @@ struct PippinPresentationModelTests {
         #expect(await runtime.updates.count == 1)
     }
 
+    @Test("permission states route to explicit user actions")
+    func permissionActionRouting() async {
+        let remindersUndetermined = await model(
+            permissions: .init(
+                reminders: .notDetermined,
+                mailAutomation: .granted,
+                fullDiskAccess: .granted
+            )
+        )
+        #expect(
+            remindersUndetermined.permissionAction(for: .reminders)
+                == .init(action: .requestRemindersAccess, title: "Request Access…")
+        )
+
+        let remindersDenied = await model(
+            permissions: .init(
+                reminders: .denied,
+                mailAutomation: .granted,
+                fullDiskAccess: .granted
+            )
+        )
+        #expect(
+            remindersDenied.permissionAction(for: .reminders)
+                == .init(action: .openRemindersSettings, title: "Open Reminders…")
+        )
+
+        let mailUnavailable = await model(
+            permissions: .init(
+                reminders: .granted,
+                mailAutomation: .unavailable,
+                fullDiskAccess: .granted
+            )
+        )
+        #expect(
+            mailUnavailable.permissionAction(for: .mailAutomation)
+                == .init(action: .openMail, title: "Open Mail…")
+        )
+
+        let mailUndetermined = await model(
+            permissions: .init(
+                reminders: .granted,
+                mailAutomation: .notDetermined,
+                fullDiskAccess: .granted
+            )
+        )
+        #expect(
+            mailUndetermined.permissionAction(for: .mailAutomation)
+                == .init(action: .requestMailAutomationAccess, title: "Request Access…")
+        )
+
+        let mailDenied = await model(
+            permissions: .init(
+                reminders: .granted,
+                mailAutomation: .restricted,
+                fullDiskAccess: .granted
+            )
+        )
+        #expect(
+            mailDenied.permissionAction(for: .mailAutomation)
+                == .init(action: .openAutomationSettings, title: "Open Automation…")
+        )
+        #expect(
+            mailDenied.permissionAction(for: .mailData)
+                == .init(action: .openFullDiskAccessSettings, title: "Open Full Disk Access…")
+        )
+    }
+
+    @Test("successful permission action advances the refreshed mirror")
+    func successfulPermissionAction() async {
+        let updated = snapshot(
+            permissions: .init(
+                reminders: .granted,
+                mailAutomation: .unavailable,
+                fullDiskAccess: .denied
+            )
+        )
+        let runtime = TestRuntime(
+            value: snapshot(),
+            permissionActionValue: updated
+        )
+        let model = PippinPresentationModel(runtime: runtime)
+        await model.refresh()
+
+        await model.performPermissionAction(.requestRemindersAccess)
+
+        #expect(await runtime.permissionActions == [.requestRemindersAccess])
+        #expect(model.permissions.reminders == .granted)
+        #expect(model.permissionActionInProgress == nil)
+        #expect(model.errorMessage == nil)
+    }
+
+    @Test("failed permission action refreshes real state and surfaces an actionable error")
+    func failedPermissionAction() async {
+        let denied = snapshot(
+            permissions: .init(
+                reminders: .denied,
+                mailAutomation: .unavailable,
+                fullDiskAccess: .denied
+            )
+        )
+        let runtime = TestRuntime(
+            value: snapshot(),
+            permissionActionError: .remindersAccessNotGranted,
+            permissionActionValue: denied
+        )
+        let model = PippinPresentationModel(runtime: runtime)
+        await model.refresh()
+
+        await model.performPermissionAction(.requestRemindersAccess)
+
+        #expect(model.permissions.reminders == .denied)
+        #expect(model.permissionActionInProgress == nil)
+        #expect(model.errorMessage?.contains("Privacy & Security > Reminders") == true)
+    }
+
+    @Test("permission actions are single-flight across the shared model")
+    func permissionActionIsSingleFlight() async {
+        let gate = ActionGate()
+        let runtime = TestRuntime(value: snapshot(), permissionActionGate: gate)
+        let model = PippinPresentationModel(runtime: runtime)
+        await model.refresh()
+
+        let first = Task { await model.performPermissionAction(.requestRemindersAccess) }
+        await gate.waitUntilStarted()
+        #expect(model.permissionActionInProgress == .requestRemindersAccess)
+
+        await model.performPermissionAction(.openMail)
+        #expect(await runtime.permissionActions == [.requestRemindersAccess])
+
+        await gate.release()
+        await first.value
+        #expect(model.permissionActionInProgress == nil)
+    }
+
+    @Test("passive runtime and model refresh never invoke the user-action dependency")
+    func passiveRefreshDoesNotPerformActions() async {
+        let service = TestPermissionService(value: permissions())
+        let host = makeHost(permissionProvider: service)
+        let runtime = ServerRuntime(
+            configURL: temporaryConfigURL(),
+            permissionProvider: service,
+            permissionActionPerformer: service,
+            runningHost: host
+        )
+        let model = PippinPresentationModel(runtime: runtime)
+
+        _ = await runtime.snapshot()
+        await model.refresh()
+
+        #expect(await service.actions.isEmpty)
+        #expect(model.permissions == permissions())
+    }
+
+    @Test("runtime routes a user action and returns a newly read permission snapshot")
+    func runtimePerformsAndRefreshesPermissionAction() async throws {
+        let granted = PermissionSnapshot(
+            reminders: .granted,
+            mailAutomation: .unavailable,
+            fullDiskAccess: .denied
+        )
+        let service = TestPermissionService(
+            value: permissions(),
+            valueAfterAction: granted
+        )
+        let host = makeHost(permissionProvider: service)
+        let runtime = ServerRuntime(
+            configURL: temporaryConfigURL(),
+            permissionProvider: service,
+            permissionActionPerformer: service,
+            runningHost: host
+        )
+
+        let result = try await runtime.performPermissionAction(.requestRemindersAccess)
+
+        #expect(await service.actions == [.requestRemindersAccess])
+        #expect(result.server?.permissions == granted)
+    }
+
     @Test("runtime saves config before applying it to the host")
     func runtimePersistsThenApplies() async throws {
         let url = temporaryConfigURL()
@@ -91,6 +346,7 @@ struct PippinPresentationModelTests {
         let runtime = ServerRuntime(
             configURL: url,
             permissionProvider: provider,
+            permissionActionPerformer: TestPermissionService(value: permissions()),
             runningHost: host
         )
         var updated = Config()
@@ -114,6 +370,7 @@ struct PippinPresentationModelTests {
         let runtime = ServerRuntime(
             configURL: url,
             permissionProvider: provider,
+            permissionActionPerformer: TestPermissionService(value: permissions()),
             runningHost: host
         )
         let original = await host.currentConfig
@@ -131,7 +388,9 @@ struct PippinPresentationModelTests {
         #expect(await host.currentConfig == original)
     }
 
-    private func snapshot() -> AppRuntimeSnapshot {
+    private func snapshot(
+        permissions: PermissionSnapshot? = nil
+    ) -> AppRuntimeSnapshot {
         AppRuntimeSnapshot(
             state: .running,
             detail: nil,
@@ -140,9 +399,19 @@ struct PippinPresentationModelTests {
                 port: 8_080,
                 sessionCount: 3,
                 config: Config(),
-                permissions: permissions()
+                permissions: permissions ?? self.permissions()
             )
         )
+    }
+
+    private func model(
+        permissions: PermissionSnapshot
+    ) async -> PippinPresentationModel {
+        let model = PippinPresentationModel(
+            runtime: TestRuntime(value: snapshot(permissions: permissions))
+        )
+        await model.refresh()
+        return model
     }
 
     private func permissions() -> PermissionSnapshot {

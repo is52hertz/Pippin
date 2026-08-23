@@ -223,8 +223,40 @@ Settings scenes. The resident runtime remains the owner of server state; the UI
 model is only a presentation mirror. Permission and runtime refreshes are
 explicit/on-appearance rather than a tight polling loop.
 
+### User-initiated permission actions and Settings activation
+
+The read boundary stays strict: `PermissionProviding` remains a read-only
+dependency of `ServerHost`, and `currentPermissions()` must never request access
+or launch another application. Explicit onboarding uses a separate
+`PermissionActionPerforming` interface implemented by
+`SystemPermissionProvider`. `ServerRuntime` routes those actions and returns a
+fresh snapshot; `PippinPresentationModel` owns the in-progress and actionable
+failure state. SwiftUI views select a model-provided semantic action and do not
+call EventKit, Apple Events, `NSWorkspace`, or System Settings directly.
+
+The approved action table is deliberately state-specific:
+
+| Row state | User action |
+|---|---|
+| Reminders `not_determined` | **Request Access…** calls `requestFullAccessToReminders()`, then refreshes |
+| Reminders `denied` / `restricted` | Open the Reminders privacy pane |
+| Mail Automation `unavailable` | **Open Mail…** launches only `com.apple.mail` through `NSWorkspace.openApplication(at:configuration:)`, then refreshes |
+| Mail Automation `not_determined` | A separate **Request Access…** calls `AEDeterminePermissionToAutomateTarget(..., askUserIfNeeded: true)` off the main actor, then refreshes |
+| Mail Automation `denied` / `restricted` | Open the Automation privacy pane |
+| Mail Data (all states) | **Open Full Disk Access…** explains that Pippin must be added manually and only opens the Full Disk Access pane |
+
+Each action is single-flight across the shared presentation model. A failed
+action still refreshes the read-only snapshot before presenting an actionable
+error, so the UI never infers or claims a grant from the request result.
+
+For this `LSUIElement` app, the menu Settings item and Command-comma share one
+semantic control backed by SwiftUI's `OpenSettingsAction`. The app replaces the
+`.appSettings` command group, calls the macOS 14+ `NSApp.activate()`, then
+opens/raises SwiftUI's existing Settings scene. It does not search for a window by title
+and does not use deprecated `activate(ignoringOtherApps:)`.
+
 HIG compliance is a deliverable, not a polish pass: standard SwiftUI controls,
-`Form`, `Section`, `Toggle`, `Button`, `SettingsLink`, system materials, no
+`Form`, `Section`, `Toggle`, `Button`, `OpenSettingsAction`, system materials, no
 hand-drawn backgrounds or custom window chrome. macOS 26 applies Liquid Glass to
 standard controls and system surfaces automatically; Pippin does not apply a
 glass effect to content. Consult `apple-skills:hig` and

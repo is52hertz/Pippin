@@ -94,10 +94,21 @@ the system frameworks.
 
 - `SystemPermissionProvider` is non-prompting. Status rendering must never call
   an EventKit request-access API or launch another app.
+- Keep that passive boundary separate from user onboarding:
+  `PermissionProviding.currentPermissions()` is the only permission interface
+  visible to `ServerHost` and `pippin_status`; explicit UI clicks route through
+  `PermissionActionPerforming` via `ServerRuntime`. Never merge the protocols or
+  infer a grant from a request result — re-read the passive snapshot afterward.
 - Reminders reports `EKEventStore.authorizationStatus(for: .reminder)`. Mail
   Automation is target-specific and queried with
   `AEDeterminePermissionToAutomateTarget(..., askUserIfNeeded: false)` only when
   Mail already runs; otherwise it is `unavailable`.
+- Permission onboarding is state-specific and user-initiated. Reminders
+  `not_determined` requests full access; denied/restricted opens its privacy
+  pane. Mail Automation `unavailable` may open only bundle ID `com.apple.mail`;
+  after refresh, `not_determined` offers a separate prompting Apple Events call
+  off `MainActor`. Denied/restricted opens Automation. Mail Data has no request
+  API and only opens Full Disk Access with manual-add instructions.
 - macOS exposes no ordinary-app API for global Full Disk Access state. Pippin's
   `full_disk_access` wire field is only an effective, read-only probe of the
   existing `~/Library/Mail` directory. The GUI deliberately labels it **Mail
@@ -112,6 +123,10 @@ the system frameworks.
 - Use native SwiftUI controls and system surfaces. macOS 26 supplies Liquid
   Glass automatically; do not add custom chrome, hand-drawn backgrounds, or a
   manual glass effect to content.
+- For this `LSUIElement` app, both the menu Settings item and Command-comma use
+  one `OpenSettingsAction` control. Call macOS 14+ `NSApp.activate()` before the
+  action so an existing Settings window is raised; do not use deprecated
+  `activate(ignoringOtherApps:)` or search for the window by title.
 
 ## Secrets
 

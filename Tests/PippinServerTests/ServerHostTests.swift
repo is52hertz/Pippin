@@ -21,9 +21,24 @@ struct ServerHostTests {
         func currentPermissions() async -> PermissionSnapshot { snapshot }
     }
 
+    private actor PassiveBoundaryProvider: PermissionProviding, PermissionActionPerforming {
+        var reads = 0
+        var actions: [PermissionAction] = []
+
+        func currentPermissions() async -> PermissionSnapshot {
+            reads += 1
+            return ServerHostTests.permissions
+        }
+
+        func perform(_ action: PermissionAction) async throws {
+            actions.append(action)
+        }
+    }
+
     private func makeHost(
         config: Config = Config(),
-        registry: ToolRegistry = ProductionToolCatalogue.registry
+        registry: ToolRegistry = ProductionToolCatalogue.registry,
+        permissionProvider: (any PermissionProviding)? = nil
     ) -> ServerHost {
         ServerHost(
             config: config,
@@ -32,7 +47,8 @@ struct ServerHostTests {
                 Self.narrowToken: TokenIdentity(label: "remote", capabilities: .readOnly),
             ]),
             registry: registry,
-            permissionProvider: TestPermissionProvider(snapshot: Self.permissions)
+            permissionProvider: permissionProvider
+                ?? TestPermissionProvider(snapshot: Self.permissions)
         )
     }
 
@@ -186,6 +202,31 @@ struct ServerHostTests {
         #expect(snapshot.permissions == Self.permissions)
         #expect(snapshot.config == Config())
         #expect(snapshot.sessionCount == 0)
+    }
+
+    @Test("pippin_status uses only the passive permission boundary")
+    func statusToolDoesNotPerformPermissionActions() async throws {
+        let provider = PassiveBoundaryProvider()
+        let host = makeHost(permissionProvider: provider)
+        let sessionID = try await completeInitialization(on: host, token: Self.broadToken)
+        let response = await host.handle(
+            request(
+                token: Self.broadToken,
+                sessionID: sessionID,
+                body: #"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"pippin_status","arguments":{}}}"#
+            )
+        )
+        guard case .stream(let stream, _) = response else {
+            Issue.record("Expected a streamed tool response")
+            return
+        }
+
+        let responseText = try await text(in: stream)
+
+        #expect(responseText.contains("not_determined"))
+        #expect(await provider.reads == 1)
+        #expect(await provider.actions.isEmpty)
+        await host.shutdown()
     }
 
     @Test("a valid config change is visible to the shared core")

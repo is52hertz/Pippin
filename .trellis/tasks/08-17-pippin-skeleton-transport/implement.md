@@ -216,10 +216,74 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
 Automated and source-level evidence is recorded in
 `research/step8-gui-verification.md`. The focused tests, signed package,
 LaunchServices `UIElement` classification, live `pippin_status`, non-launch of
-Mail, HIG/source review, and independent Trellis check all pass. The final box
-remains open only for the user's visual confirmation of the menu-bar popup,
-Settings window, and no-prompt behaviour; the UI automation driver cannot attach
-to an unopened `LSUIElement` status item.
+Mail, source review, and independent Trellis check all pass. A user visual review
+on 2026-08-23 confirmed that the menu now renders after the zero-height fix, but
+**rejected the UI as non-HIG-compliant and visually unfinished**: the menu is
+over-dense and clips its lower content, while Settings is oversized, has
+unbalanced empty space, and isolates Refresh as a floating centered control.
+AC10 and the final Step 8 box therefore remain open. The screenshots are local
+temporary artifacts and are described, not copied into the public repository.
+
+Before redesign, the functional manual checks were: scroll the menu to
+its action row; open Settings from both `Settings…` and Command-comma; verify a
+module enable toggle persists after closing/reopening and restore it; verify all
+three privacy buttons route to the intended panes without changing grants; and
+verify Refresh neither prompts for TCC nor launches Mail. The later visual pass
+must address hierarchy, density, window sizing, toolbar placement, and both
+appearances before AC10 can close.
+
+Manual functional result (2026-08-23): scrolling/action-row reachability,
+module-toggle persistence, and Refresh all pass. Settings opens from both entry
+points, but an already-open Settings window is not activated or raised — a real
+`LSUIElement` activation bug. Privacy deep links reach the intended panes, but
+Reminders and Automation do not list Pippin because the app has never made an
+explicit first authorization request; navigation alone cannot register a TCC
+entry. Mail Data was not changed in this run and still reflects the grant made in
+the previous run. This pre-fix result kept Step 8 open until Settings activation
+and permission onboarding were implemented and rerun below.
+
+Approved functional clarification (2026-08-23; no PRD conflict):
+
+- Replace both native Settings entry points with one semantic
+  `OpenSettingsAction` control, replace `.appSettings` for Command-comma, and
+  call macOS 14+ `NSApp.activate()` before opening/raising the existing Settings
+  scene. Do not use window-title discovery or deprecated activation APIs.
+- Keep `PermissionProviding`, every `ServerHost` snapshot, `pippin_status`, UI
+  appearance refresh, and explicit Refresh strictly read-only and nonprompting.
+- Add a separate user-action interface implemented by
+  `SystemPermissionProvider`; route it through `ServerRuntime` and the shared
+  presentation model so views own no EventKit, Apple Events, workspace, or
+  System Settings behavior.
+- Reminders requests full access only from a `not_determined` **Request
+  Access…** click; denied/restricted routes to the Reminders privacy pane.
+- Mail Automation `unavailable` offers **Open Mail…** and launches only
+  `com.apple.mail` with modern `NSWorkspace`; `not_determined` offers a separate
+  **Request Access…** that calls the prompting Apple Events determination off
+  the main actor; denied/restricted routes to Automation.
+- Mail Data never offers a request. Its button is **Open Full Disk Access…**,
+  explains manual addition, and only opens that pane.
+- Expose one in-progress action to suppress duplicate clicks. On success or
+  failure, refresh the authoritative read-only snapshot; surface actionable
+  failure text without synthesizing a permission state.
+- Add behavior tests for state-to-action routing, runtime/model success and
+  failure transitions, passive nonprompting isolation, and request-result /
+  OSStatus mappings. No source-scan or view-tautology tests.
+
+This patch intentionally leaves the visual redesign and AC10 open. It does not
+add module tools, Step 9 work, dependencies, or signing changes.
+
+Functional implementation result (2026-08-24): the Settings activation path,
+state-specific onboarding actions, strict passive/action protocol split,
+single-flight presentation state, and refreshed failure handling are implemented.
+`swift build` passes; `swift test` passes 193 tests in 24 suites; and
+`git diff --check` passes. The added regressions exercise state-to-action
+routing, runtime/model success and failure, duplicate suppression, request-result
+mapping, passive refresh isolation, and a real MCP `pippin_status` call through
+the passive boundary. The signed-app rerun passed both Settings entry points,
+Reminders onboarding, Mail launch followed by separate Automation onboarding,
+and Full Disk Access navigation. A subsequent passive status call reported all
+three effective states as `granted`. The visual redesign and AC10 remain
+separate and open.
 
 ### Step 9 — Integration and full-scope check
 - [ ] Connect Claude Code over HTTP and over the shim; confirm identical tool

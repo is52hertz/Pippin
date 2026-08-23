@@ -14,17 +14,20 @@ struct PippinMenuView: View {
                 PermissionStatusRow(
                     title: "Reminders",
                     state: model.permissions.reminders,
-                    pane: .reminders
+                    permission: .reminders,
+                    model: model
                 )
                 PermissionStatusRow(
                     title: "Mail Automation",
                     state: model.permissions.mailAutomation,
-                    pane: .mailAutomation
+                    permission: .mailAutomation,
+                    model: model
                 )
                 PermissionStatusRow(
                     title: "Mail Data",
                     state: model.permissions.fullDiskAccess,
-                    pane: .mailData
+                    permission: .mailData,
+                    model: model
                 )
             }
 
@@ -47,7 +50,7 @@ struct PippinMenuView: View {
 
             Section {
                 HStack {
-                    SettingsLink()
+                    PippinSettingsButton()
                     Button("Refresh", systemImage: "arrow.clockwise") {
                         Task { await model.refresh() }
                     }
@@ -60,7 +63,7 @@ struct PippinMenuView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 390)
+        .frame(width: 390, height: 440)
         .task { await model.refresh() }
     }
 
@@ -90,19 +93,22 @@ struct PippinSettingsView: View {
                     title: "Reminders",
                     detail: "Pippin reports EventKit's current Reminders authorization.",
                     state: model.permissions.reminders,
-                    pane: .reminders
+                    permission: .reminders,
+                    model: model
                 )
                 PermissionSettingsRow(
                     title: "Mail Automation",
                     detail: "Target-specific Apple Events access, checked only while Mail is running.",
                     state: model.permissions.mailAutomation,
-                    pane: .mailAutomation
+                    permission: .mailAutomation,
+                    model: model
                 )
                 PermissionSettingsRow(
                     title: "Mail Data",
-                    detail: "Effective read access to ~/Library/Mail, not a global Full Disk Access claim.",
+                    detail: "Effective read access to ~/Library/Mail. Add Pippin manually in Full Disk Access; macOS provides no prompt.",
                     state: model.permissions.fullDiskAccess,
-                    pane: .mailData
+                    permission: .mailData,
+                    model: model
                 )
             }
 
@@ -111,7 +117,7 @@ struct PippinSettingsView: View {
             }
 
             if let error = model.errorMessage {
-                Section("Could Not Apply Settings") {
+                Section("Action Needed") {
                     Text(error)
                         .foregroundStyle(.red)
                         .textSelection(.enabled)
@@ -152,14 +158,18 @@ private struct ServerStatusRows: View {
 private struct PermissionStatusRow: View {
     let title: String
     let state: PermissionState
-    let pane: PrivacySettingsPane
+    let permission: PresentedPermission
+    let model: PippinPresentationModel
 
     var body: some View {
         LabeledContent(title) {
             HStack {
                 Text(state.displayName)
                     .foregroundStyle(.secondary)
-                Button("Open \(title)…") { pane.open() }
+                PermissionActionControl(
+                    model: model,
+                    presentation: model.permissionAction(for: permission)
+                )
             }
         }
     }
@@ -169,14 +179,18 @@ private struct PermissionSettingsRow: View {
     let title: String
     let detail: String
     let state: PermissionState
-    let pane: PrivacySettingsPane
+    let permission: PresentedPermission
+    let model: PippinPresentationModel
 
     var body: some View {
         LabeledContent {
             HStack {
                 Text(state.displayName)
                     .foregroundStyle(.secondary)
-                Button("Open \(title)…") { pane.open() }
+                PermissionActionControl(
+                    model: model,
+                    presentation: model.permissionAction(for: permission)
+                )
             }
         } label: {
             VStack(alignment: .leading, spacing: 2) {
@@ -186,6 +200,41 @@ private struct PermissionSettingsRow: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+private struct PermissionActionControl: View {
+    let model: PippinPresentationModel
+    let presentation: PermissionActionPresentation?
+
+    var body: some View {
+        if let presentation {
+            if model.permissionActionInProgress == presentation.action {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("Permission action in progress")
+            }
+            Button(presentation.title, action: perform)
+                .disabled(model.permissionActionInProgress != nil)
+        }
+    }
+
+    private func perform() {
+        guard let presentation else { return }
+        Task { await model.performPermissionAction(presentation.action) }
+    }
+}
+
+struct PippinSettingsButton: View {
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        Button("Settings…", action: open)
+    }
+
+    private func open() {
+        NSApp.activate()
+        openSettings()
     }
 }
 
