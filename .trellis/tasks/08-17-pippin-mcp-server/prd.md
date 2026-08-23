@@ -49,8 +49,11 @@ delete, unreliable Reminders access, no Mail), and its scope is Apple-only.
 - **C4 — Build target.** macOS 26 SDK, Swift 6 language mode. GUI must follow
   HIG and use standard controls and system materials (Liquid Glass comes from
   building against the macOS 26 SDK); no custom-drawn chrome.
-- **C5 — Dependencies.** Exactly one third-party dependency:
-  `modelcontextprotocol/swift-sdk` (official). Approved by the user (O1).
+- **C5 — Dependencies.** Two third-party dependencies, both user-approved and
+  both first-party-adjacent: `modelcontextprotocol/swift-sdk` (official MCP SDK,
+  O1) and `apple/swift-nio` (HTTP/1.1 + SSE listener, O4 — the SDK ships no HTTP
+  server). NIO is used only by `PippinServer`. Nothing else without a new
+  decision.
 - **C6 — Naming.** Product name Pippin; MCP server name and tool prefix
   `pippin`. Repository directory name stays `iMCP` for now. Distinct naming
   keeps the old server installable side-by-side during transition.
@@ -216,9 +219,7 @@ O1–O3 answered by the user in `addendum-2026-08-18.md` §1.
 - [x] **O3 — Budget approved with the batch-one figure raised to 6 KB.** See A3
       for the reasoning. Long-term figures unchanged.
 
-### Open
-
-- [ ] **O4 — How the HTTP listener is provided.** Raised 2026-08-23 by step-0
+- [x] **O4 — HTTP listener: swift-nio.** Raised 2026-08-23 by step-0
       verification (`../08-17-pippin-skeleton-transport/research/swift-sdk-surface.md`).
       swift-sdk ships no HTTP server, so C5's "exactly one dependency" cannot be
       read as "no listener work". Three options, all compatible with everything
@@ -239,7 +240,12 @@ O1–O3 answered by the user in `addendum-2026-08-18.md` §1.
          that the shared `EKEventStore`, confirm-token store, and audit log were
          designed around — i.e. it defers the architecture, not just the code.
 
-      Blocks skeleton step 4. Steps 1–3 and G1 are unaffected and can proceed.
+      **Answered 2026-08-23: option 1, swift-nio.** Rationale accepted — SSE
+      streaming plus `Last-Event-ID` resumability is real protocol surface to hand
+      -write, and it sits on the process's only externally reachable port; option
+      3 would have forced a transport rewrite in batch two. C5 is amended: the
+      dependency set is `modelcontextprotocol/swift-sdk` **and** `apple/swift-nio`,
+      the latter used only by `PippinServer` for the HTTP/1.1 + SSE listener.
 ## Relationship to Task `00-bootstrap-guidelines`
 
 `AGENTS.md` still carries TODO placeholders (Product, Project Phase, Coding

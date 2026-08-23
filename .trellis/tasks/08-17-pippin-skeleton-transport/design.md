@@ -13,7 +13,7 @@ swiftLanguageModes: [.v6]
 targets:
   PippinCore     // no MCP, no SwiftUI imports — pure, unit-testable
   PippinModules  // depends on PippinCore
-  PippinServer   // depends on PippinCore + PippinModules + MCP
+  PippinServer   // depends on PippinCore + PippinModules + MCP + NIO
   PippinApp      // executable; SwiftUI; depends on PippinServer
   pippin-shim    // executable; depends on MCP only
   PippinCoreTests, PippinServerTests
@@ -57,11 +57,18 @@ serialize through one owner — this is the mechanism behind parent criterion A4
 ```
 PippinApp (SwiftUI App)
   └── ServerHost (actor)
-        ├── Server (swift-sdk) + StatefulHTTPServerTransport(host: "127.0.0.1")
+        ├── HTTPListener (swift-nio, bound 127.0.0.1)   ← O4
+        ├── Sessions: sessionID → (Server, StatefulHTTPServerTransport)
         ├── ToolRegistry      (derived from Config)
         ├── ConfirmTokenStore (in-memory only; a restart invalidates every token)
         └── AuditLog
 ```
+
+The SDK's transport binds no socket and serves exactly one session, so the
+listener is ours (swift-nio, per O4) and clients get one `Server` each. Everything
+below the session table is shared process state — that sharing is the whole point
+of a resident process. See
+`research/swift-sdk-surface.md`.
 
 Confirm tokens intentionally live in memory only. A restarted server refusing a
 token minted by its predecessor is the correct, conservative behaviour.
