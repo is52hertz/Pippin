@@ -65,3 +65,24 @@ Implemented honest non-prompting permission reporting, native menu-bar and Setti
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: Pippin Step 8 permission onboarding
+
+**Date**: 2026-08-24
+**Task**: Pippin Step 8 permission onboarding
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Separated passive permission status from explicit user actions, fixed LSUIElement Settings activation, added state-specific Reminders and Mail onboarding, verified 193 tests and the stable signed bundle, and recorded the remaining visual HIG debt.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `acfdcff` | (see git log) |
+
+### Status
+
+[OK] **Completed**
