@@ -66,12 +66,19 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   material survives under `$TMPDIR`. Caveat recorded — `spctl` proved nothing on
   this machine, where Gatekeeper assessment is disabled.
 
-### Step 3 — Config and core error/DTO plumbing
-- [ ] `Config` with defaults, load/save, loopback-bind validation.
-- [ ] `PippinError` with the parent's code set; every code carries a hint.
-- [ ] DTO conventions: null pruning, ISO-8601 encoding, cursor pagination.
-- Validation: `swift test --filter PippinCoreTests` covering non-loopback refusal,
-  pruning, and hint coverage.
+### Step 3 — Config and core error/DTO plumbing  ✅ done 2026-08-23
+- [x] `Config`: defaults (writes off, escape hatch closed), snake_case wire form,
+      load/save, loopback-bind validation via `inet_pton`. A corrupt file is an
+      error, not a silent reset — discarding it would discard the write gates.
+- [x] `PippinError`: the parent's ten codes, each with a non-empty actionable
+      hint; wire form matches the design byte for byte; absent `detail` pruned.
+- [x] DTO conventions: `JSONValue` with recursive pruning that keeps `false` and
+      `0`, ISO-8601 with explicit offset, opaque-cursor pagination with a
+      server-side cap.
+- [x] Validation: `swift test` — **47 tests in 6 suites, all passing.** Covers
+      non-loopback refusal (including `localhost` and `0.0.0.0`), pruning
+      (including the falsy-value trap), hint coverage across every code, and
+      pagination termination end to end.
 
 ### Step 4 — Server, transport, validators
 > **Blocked on parent open decision O4** (how the HTTP listener is provided).
