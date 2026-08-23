@@ -50,6 +50,13 @@ public actor ServerHost {
     private let registry: ToolRegistry
     private let logger: Logger
 
+    /// Shared across every session. This is what the resident process is for:
+    /// one confirm-token store so a token cannot be replayed on another
+    /// connection, and one audit log so the trail has no gaps.
+    private let confirmTokens = ConfirmTokenStore()
+    private let audit: AuditLog
+    private let appleScript = AppleScriptRunner()
+
     private var config: Config
     private var sessions: [String: Session] = [:]
     private var boundPort: Int = 0
@@ -61,8 +68,10 @@ public actor ServerHost {
         tokenStore: TokenStore,
         registry: ToolRegistry,
         configuration: Configuration = .init(),
+        audit: AuditLog = AuditLog(),
         logger: Logger = Logger(label: "pippin.server")
     ) {
+        self.audit = audit
         self.config = config
         self.tokenStore = tokenStore
         self.registry = registry
@@ -191,7 +200,7 @@ public actor ServerHost {
             logger: logger
         )
 
-        let server = await makeServer(capabilities: identity.capabilities)
+        let server = await makeServer(sessionID: sessionID, capabilities: identity.capabilities)
 
         do {
             try await server.start(transport: transport)
@@ -220,7 +229,7 @@ public actor ServerHost {
         return response
     }
 
-    private func makeServer(capabilities: Capabilities) async -> Server {
+    private func makeServer(sessionID: String, capabilities: Capabilities) async -> Server {
         let server = Server(
             name: "pippin",
             version: configuration.version,
@@ -238,7 +247,7 @@ public actor ServerHost {
             guard let self else {
                 throw PippinError(.backendUnavailable, detail: "server")
             }
-            return try await self.call(params, capabilities: capabilities)
+            return try await self.call(params, sessionID: sessionID, capabilities: capabilities)
         }
 
         return server
@@ -248,7 +257,25 @@ public actor ServerHost {
         registry.tools(config: config, capabilities: capabilities)
     }
 
-    private func call(_ params: CallTool.Parameters, capabilities: Capabilities) async throws -> CallTool.Result {
+    /// The context every module tool will be invoked with. Built per call so it
+    /// always reflects the current config, and carrying the session so confirm
+    /// tokens are bound to the connection that minted them.
+    public func context(sessionID: String, capabilities: Capabilities) -> ToolContext {
+        ToolContext(
+            sessionID: sessionID,
+            capabilities: capabilities,
+            config: config,
+            confirmTokens: confirmTokens,
+            audit: audit,
+            appleScript: appleScript
+        )
+    }
+
+    private func call(
+        _ params: CallTool.Parameters,
+        sessionID: String,
+        capabilities: Capabilities
+    ) async throws -> CallTool.Result {
         // Re-check visibility at call time. The registry already hides what a
         // caller may not use, but a tool that is merely absent from a list is not
         // the same as one that refuses to run, and only the second survives a

@@ -105,21 +105,31 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
       Plus the two-token capability test from AC11. `swift test`: 85 tests,
       11 suites, all passing.
 
-### Step 5 — Core safety primitives
-- [ ] `ConfirmTokenStore`: mint / validate / consume, TTL, single-use, ID-set
-      hash binding, session binding.
-- [ ] `MutationGate`, `AuditLog` (JSONL, rotation, argument digests only).
-- [ ] `AppleScriptRunner`: Apple Event argument passing, wall-clock timeout, no
-      string interpolation of caller input.
-- [ ] `SQLiteReader`: read-only open, dynamic versioned-path resolution, schema
-      probe that disables the backend on mismatch.
-- [ ] `BackendRouter`: ordered backends and degradation policy.
-- Validation: `swift test` — token lifecycle cases, an injection-attempt test
-      proving the payload is inert, a schema-probe-failure test proving the
-      backend disables rather than returning zero rows. AC9.
-- **Review gate G2:** the module children depend on these signatures. Review the
-  primitive APIs here before module work starts; changing them later means
-  reworking both module tasks.
+### Step 5 — Core safety primitives  ✅ done 2026-08-23 · gate G2 passed
+- [x] `ConfirmTokenStore`: mint / validate / consume, TTL, single-use, SHA-256
+      ID-set binding (order-independent), session binding, tool binding, item cap.
+- [x] `MutationGate`, `AuditLog` (JSONL, 0600, one-generation rotation, argument
+      digests only).
+- [x] `AppleScriptRunner`: values via `on run argv`, never interpolated;
+      wall-clock timeout with SIGTERM then SIGKILL.
+- [x] `SQLiteReader`: read-only + `immutable=1`, dynamic versioned-path
+      resolution (numeric, so V10 beats V9), schema probe that disables the
+      backend on mismatch, bound parameters only.
+- [x] `BackendRouter`: ordered backends, degradation marker with a reason, and it
+      throws rather than ever returning empty.
+- [x] `ToolContext` — **added by the G2 review**. The six primitives were
+      individually complete and collectively unusable: nothing carried
+      `sessionID` into a module handler, which A2's session binding is defined in
+      terms of. It also absorbs the whole two-phase delete protocol
+      (`confirmDestructive`), so the guarantees hold by construction rather than
+      by each module remembering five checks and three audit calls.
+- [x] Validation: `swift test` — **151 tests in 18 suites, all passing.**
+      Injection payloads run through real `osascript` and real SQLite and are
+      inert; a 10-second script under a 600 ms timeout returns in ~0.6 s; a failed
+      schema probe never yields zero rows; every routing failure throws.
+- **Review gate G2: PASSED.** Frozen API surface, what the review changed, and
+  the four bugs it surfaced are recorded in
+  `research/g2-primitive-api-freeze.md`.
 
 ### Step 6 — Tool registry and gating
 - [ ] `(Config, Capabilities) → [Tool]` as a pure function.
