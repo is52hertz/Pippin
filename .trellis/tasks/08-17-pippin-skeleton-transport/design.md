@@ -106,15 +106,42 @@ is enforced here, in code.
 ## 4. Shim Behaviour
 
 ```
-1. read ~/Library/Application Support/Pippin/endpoint.json
-2. if missing or connect fails → launch the app by bundle identifier
-3. poll for readiness, bounded timeout
-4. StdioTransport ⇄ HTTP: forward frames both ways, unmodified
-5. on any terminal failure → emit a distinct, actionable error and exit non-zero
+1. read and validate ~/Library/Application Support/Pippin/endpoint.json
+2. if missing, malformed, stale, or unreachable → launch bundle identifier
+   io.github.is52hertz.pippin under a hard deadline; SIGTERM then SIGKILL the
+   `open` helper if it fails to exit
+3. poll a bounded authenticated readiness probe until a fresh endpoint responds
+4. wrap this process's stdin/stdout with StdioTransport and connect
+   HTTPClientTransport to the resident endpoint
+5. relay raw JSON-RPC Data frames in both directions while converting newline,
+   HTTP POST, SSE event, and session-header framing
+6. supervise resident liveness; on normal EOF, give the already-accepted bounded
+   POST queue a two-second drain grace, cancel any remainder, best-effort DELETE
+   the MCP session, then disconnect
+7. on any terminal failure → emit one distinct, actionable stderr diagnostic
+   and exit non-zero
 ```
 
-The shim never parses or rewrites payloads. Keeping it a dumb pipe is what makes
-"the shim holds no state" verifiable rather than aspirational.
+The shim does not interpret or rewrite JSON-RPC payload business content. It is
+not a literal byte pipe: stdio, Streamable HTTP, and SSE have different framing,
+so it must convert framing and hold the MCP session ID plus in-flight connection
+state for the lifetime of one stdio connection.
+
+That state is strictly ephemeral. The endpoint and bearer token live only in
+memory (the token is never logged or written), and the session ID, SSE cursor,
+readiness deadline, and in-flight HTTP tasks disappear when the shim exits. The
+shim holds no shared or persistent business state, security decisions, Apple
+data, TCC grant, cache, or audit log. The sole owner of those remains the
+resident `Pippin.app` process.
+
+Verified against swift-sdk 0.12.1 in
+`research/shim-transport-surface.md`: `StdioTransport` and
+`HTTPClientTransport` both expose raw `Data` frames and already implement newline
+and HTTP/SSE/session framing respectively. The SDK has no generic proxy,
+readiness probe, client-side DELETE, or reliable outward failure for its
+background GET reconnect loop, so Pippin owns the two structured relay pumps,
+bounded startup/readiness, runtime liveness supervision, and best-effort DELETE.
+No additional dependency is needed.
 
 ## 5. Tool Registry
 

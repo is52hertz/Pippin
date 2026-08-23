@@ -155,12 +155,38 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   catalogues exist; it remains an integration check for their module work and
   step 9. No packaged-bundle module tool was fabricated for this step.
 
-### Step 7 — Shim
-- [ ] `pippin-shim`: read `endpoint.json`, launch the app if needed, bounded
-      readiness poll, dumb bidirectional frame forwarding.
-- [ ] Distinct actionable errors for each terminal failure path.
-- Validation: register the shim with Claude Code, list tools; then test each
-      failure path (delete `endpoint.json`, kill the app, block launch). AC8.
+### Step 7 — Shim  ✅ done 2026-08-23
+- [x] First follow the source-level contract in
+      `research/shim-transport-surface.md` (swift-sdk 0.12.1): use raw
+      `StdioTransport` + `HTTPClientTransport` rather than typed `Client` /
+      `Server`, because the SDK exposes no wildcard proxy.
+- [x] Read and validate `endpoint.json`. If missing, malformed, stale, or
+      unreachable, launch the fixed bundle ID `io.github.is52hertz.pippin` via
+      `/usr/bin/open -b`, then wait for a fresh authenticated endpoint under one
+      bounded readiness deadline.
+- [x] Relay JSON-RPC `Data` frames without interpreting or rewriting their
+      business content, while converting stdio newline framing, HTTP POSTs, SSE
+      events, and `MCP-Session-Id` framing. Preserve initialize ordering, then
+      permit bounded concurrent POSTs so a long-running request cannot block
+      cancellation or another request.
+- [x] Hold only per-process ephemeral transport/session state. Keep the bearer
+      token in memory only and never log/output it. Supervise resident liveness;
+      on normal stdin EOF, use a bounded drain grace, cancel any stuck POST, and
+      best-effort DELETE the MCP session before disconnect.
+- [x] Distinct actionable nonzero exits for endpoint missing/malformed/stale,
+      launch failure, readiness timeout, authentication failure, connection
+      failure, runtime resident death, and stdio/output failure. No path hangs.
+- [x] Tests: unchanged payload round-trip; session capture/reuse/termination;
+      JSON, 202, POST-SSE, multi-event and split-chunk SSE; endpoint
+      missing/malformed/stale; launch/readiness timeout; authentication and
+      connection failure; long-running POST does not block cancellation.
+- Validation this round: protocol-level tests plus a Codex stdio smoke test and
+  direct-HTTP vs shim `tools/list` parity. Claude Code remains AC3's final client
+  but its real smoke test is deferred to step 9 while organization access is
+  externally disabled; that block is not a Pippin failure.
+- Evidence: `research/step7-shim-verification.md`. `swift test` passed 172 tests
+  in 22 suites. Codex launched the signed bundle's shim over stdio and called
+  `pippin_status`; the direct-HTTP parity test observed the same `tools/list`.
 
 ### Step 8 — GUI
 - [ ] `MenuBarExtra`: server status, port, session count, permission rows with
@@ -172,7 +198,9 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
 
 ### Step 9 — Integration and full-scope check
 - [ ] Connect Claude Code over HTTP and over the shim; confirm identical tool
-      lists. AC3.
+      lists. AC3. External prerequisite: restore Claude Code organization access
+      or provide an Anthropic API key; until then, retain the protocol-level and
+      Codex smoke evidence without marking AC3 complete.
 - [ ] Two concurrent clients, one process, shared state, config change observed
       by both. AC4.
 - [ ] Three rebuild-repackage cycles with no fresh TCC prompt. AC2.

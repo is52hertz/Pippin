@@ -29,7 +29,12 @@ written against them.
 - **S4 — Endpoint publication and shim.** `endpoint.json` (mode `0600`) carrying
   port and token. `pippin-shim` reads it, bridges `StdioTransport` to the HTTP
   endpoint, launches the app if it is not running, and fails with an actionable
-  message on timeout rather than hanging. The shim holds no state.
+  message on timeout rather than hanging. The shim holds no shared or persistent
+  business state, security decisions, or Apple data. During one stdio
+  connection, it may hold only the ephemeral transport/session state required
+  to convert framing: the endpoint, the bearer token in memory (never logged),
+  the MCP session ID, and in-flight HTTP/SSE connection state. All of it
+  disappears when the shim exits.
 - **S5 — Tool registry with gating.** Modules and their write capability are
   enabled per config. Disabled means absent from `tools/list`. Config changes
   re-derive the registry and emit `notifications/tools/list_changed`.
@@ -73,9 +78,13 @@ written against them.
       with no fresh TCC prompt. (Feeds parent A1.)
 - [ ] **AC3** Claude Code connects over HTTP and lists exactly the enabled tools;
       Claude Code connects through `pippin-shim` and lists the same set.
-- [ ] **AC4** Two clients connected at once are served by one process; the shim
-      adds no state. Verified by process inspection plus a config change that both
-      clients observe. (Feeds parent A4.)
+- [ ] **AC4** Two clients connected at once are served by one resident app
+      process. A shim adds no shared or persistent state: each shim process holds
+      only the temporary transport/session state scoped to its own stdio
+      connection, and all of it disappears when that process exits. All shared
+      business state and Apple-data handles remain owned exclusively by the one
+      resident `Pippin.app` process. Verified by process inspection plus a config
+      change that both clients observe. (Feeds parent A4.)
 - [ ] **AC5** A request with a missing or wrong bearer token is rejected 401. A
       request with a non-loopback `Origin` is rejected. A config with a
       non-loopback `bind` is refused at startup with a clear error.

@@ -69,6 +69,27 @@ the system frameworks.
 - Automated ceilings: serialized batch-one `tools/list` ≤ 6 KiB, each tool
   description ≤ 200 characters, and the long-term default catalogue ≤ 40 tools.
 
+## Stdio shim transport
+
+- `PippinShim` relays raw `Data` between swift-sdk 0.12.1's `StdioTransport`
+  and `HTTPClientTransport`. Do not insert typed SDK `Client`/`Server` actors:
+  they consume lifecycle messages and cannot transparently proxy unknown tools.
+- The shim converts newline, HTTP POST, SSE-event, and `MCP-Session-Id` framing
+  without decoding or rewriting JSON-RPC business content. It sequences the
+  first two frames for initialize/initialized, then allows at most four POSTs
+  concurrently.
+- All shim state is scoped to one process/stdio connection. The endpoint,
+  bearer token, session ID, SSE state, and requests are memory-only; the token
+  must never enter logs, diagnostics, arguments, or environment variables.
+  `PippinShim` must not import or access Apple/TCC data frameworks.
+- Endpoint recovery validates a mode-0600 file, literal loopback host, port, and
+  live PID, then launches only bundle ID `io.github.is52hertz.pippin`. Startup
+  waits are bounded; the `open` helper escalates TERM→KILL rather than hanging.
+- On stdin EOF, accepted POSTs receive a two-second drain grace. The shim then
+  cancels any remainder, sends best-effort authenticated DELETE for the session,
+  and disconnects. Preserve the timeout and the regression tests when changing
+  lifecycle code.
+
 ## Secrets
 
 The repository is public. `.gitignore` denies keys, certificates, keychains,

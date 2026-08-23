@@ -12,7 +12,7 @@ child task's `design.md` and must not contradict this file.
        │ HTTP              │ stdio            │ HTTP
        │                   ▼                  │
        │           ┌───────────────┐          │
-       │           │ pippin-shim   │  no state, no TCC needs
+       │           │ pippin-shim   │  ephemeral framing state; no TCC needs
        │           └──────┬────────┘          │
        ▼                  ▼                   ▼
    ┌─────────────────────────────────────────────────┐
@@ -77,8 +77,11 @@ initialiser that does not exist. Corrected against swift-sdk 0.12.1 source — s
   `HTTPResponse.stream(AsyncThrowingStream<Data, Error>)` for the listener to pipe.
 - Compatibility transport: `pippin-shim`, a separate tiny executable that speaks
   `StdioTransport` to the client and forwards to the resident HTTP endpoint. It
-  is a byte pipe: no caching, no state, no interpretation of payloads, and
-  therefore no TCC requirements of its own.
+  does not interpret or rewrite JSON-RPC payload business content, but it must
+  convert newline, HTTP POST, SSE, and session-header framing. It therefore holds
+  per-connection ephemeral endpoint/session/in-flight state, including the
+  bearer token in memory only; all of it disappears on exit. It holds no shared
+  or persistent business state, security decisions, Apple data, or TCC handles.
 
 **Endpoint discovery.** The app writes
 `~/Library/Application Support/Pippin/endpoint.json` (mode `0600`) containing the

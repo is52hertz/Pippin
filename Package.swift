@@ -41,13 +41,19 @@ let package = Package(
 
         .executableTarget(name: "PippinApp", dependencies: ["PippinServer"]),
 
-        .executableTarget(
-            name: "pippin-shim",
+        .target(
+            name: "PippinShim",
             dependencies: [.product(name: "MCP", package: "swift-sdk")]
         ),
 
+        .executableTarget(name: "pippin-shim", dependencies: ["PippinShim"]),
+
         .testTarget(name: "PippinCoreTests", dependencies: ["PippinCore"]),
         .testTarget(name: "PippinServerTests", dependencies: ["PippinServer"]),
+        .testTarget(
+            name: "PippinShimTests",
+            dependencies: ["PippinShim", "PippinServer", "PippinCore", .product(name: "MCP", package: "swift-sdk")]
+        ),
     ],
     swiftLanguageModes: [.v6]
 )
