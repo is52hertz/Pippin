@@ -18,9 +18,11 @@ child task's `design.md` and must not contradict this file.
    ┌─────────────────────────────────────────────────┐
    │ Pippin.app  (single resident process)           │
    │  ┌───────────────────────────────────────────┐  │
-   │  │ MCP Server (swift-sdk)                    │  │
-   │  │  StatefulHTTPServerTransport 127.0.0.1    │  │
+   │  │ HTTP listener  127.0.0.1  (ours — O4)     │  │
    │  │  + bearer-token / Origin validators       │  │
+   │  ├───────────────────────────────────────────┤  │
+   │  │ Session table: sessionID → Server + tport │  │
+   │  │  (swift-sdk; one pair per client)         │  │
    │  └──────────────────┬────────────────────────┘  │
    │  ┌──────────────────▼────────────────────────┐  │
    │  │ Tool Registry  (module gating, budget)    │  │
@@ -44,12 +46,35 @@ that needs TCC grants — which is exactly why the identity must be stable.
 
 ## 2. Process and Transport Topology
 
-**One resident instance.** Rationale (from the requirement set): per-client
-stdio spawning fragments `EKEventStore` instances, confirmation tokens, and
-timeout state into copies that cannot see each other.
+**One resident process, one shared state core, one `Server` per client.**
+Rationale (from the requirement set): per-client stdio spawning fragments
+`EKEventStore` instances, confirmation tokens, and timeout state into copies that
+cannot see each other.
 
-- Primary transport: `StatefulHTTPServerTransport(port:, host: "127.0.0.1")`.
-  Session management and SSE come from the SDK.
+The earlier phrasing here said "one resident instance" and named a transport
+initialiser that does not exist. Corrected against swift-sdk 0.12.1 source — see
+`../08-17-pippin-skeleton-transport/research/swift-sdk-surface.md`:
+
+- `StatefulHTTPServerTransport` takes **no port and no host**. It is a
+  framework-agnostic `HTTPRequest → HTTPResponse` handler; the listener is ours to
+  supply. How we supply it is open decision **O4**.
+- Each transport instance owns exactly one MCP session and refuses a second
+  `initialize`. Serving several agents therefore means a session table —
+  `sessionID → (Server, transport)` — with a fresh `Server` per connecting client,
+  which is the SDK's own supported pattern.
+- The single-instance requirement is unchanged; it just lands one level down. All
+  state whose fragmentation motivated it — `EKEventStore` and module backends,
+  `ConfirmTokenStore`, `AuditLog`, `MutationGate`, `Config`, `TokenStore` — lives
+  in a process-level core injected into every per-session `Server`. Only the
+  server object, its transport, its handlers, and the caller's resolved capability
+  set are per-session.
+- Session identity is available inside tool handlers via the
+  `Server.currentHandlerContext` task-local (`httpContext: HTTPRequest?`), and
+  more simply still by capturing it when the per-session `Server` is built. This
+  is what criterion A2's confirm-token session binding rests on; it is confirmed
+  present.
+- Session management and SSE framing come from the SDK; an SSE response arrives as
+  `HTTPResponse.stream(AsyncThrowingStream<Data, Error>)` for the listener to pipe.
 - Compatibility transport: `pippin-shim`, a separate tiny executable that speaks
   `StdioTransport` to the client and forwards to the resident HTTP endpoint. It
   is a byte pipe: no caching, no state, no interpretation of payloads, and

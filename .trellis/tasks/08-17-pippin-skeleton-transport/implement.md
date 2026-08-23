@@ -9,22 +9,28 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
 
 ## Checklist
 
-### Step 0 — Verify the SDK surface
-- [ ] Resolve the swift-sdk version and confirm, against the real package:
-      `StatefulHTTPServerTransport` init signature and `HTTPRequestValidator`
-      shape; `StdioTransport`; `Tool` / `Tool.Annotations` / `outputSchema`;
-      `Server.withMethodHandler(ListTools/CallTool)`; how
-      `notifications/tools/list_changed` is emitted; how a session is identified
-      (needed for confirm-token session binding).
-- [ ] If session identity is not exposed per request, stop and revise the
-      confirm-token design in the parent `design.md` before proceeding — session
-      binding is a parent A2 requirement.
-- Validation: a throwaway `swift build` against the resolved version compiles a
-  minimal server.
+### Step 0 — Verify the SDK surface  ✅ done 2026-08-23
+- [x] Version resolved: **0.12.1** (latest tag). Every API confirmed against the
+      cloned source, not documentation. Full record:
+      `research/swift-sdk-surface.md`.
+- [x] Throwaway probe compiles and runs under Swift 6 language mode on
+      `.macOS(.v26)`.
+- [x] **Stop condition cleared.** Per-request session identity *is* exposed —
+      `Server.currentHandlerContext.httpContext: HTTPRequest?` inside handlers,
+      and per-session `Server` construction besides. Parent A2 stands unchanged;
+      no confirm-token redesign needed.
+- [x] Two corrections folded into the parent `design.md` §2 and `prd.md` O1:
+      the transport takes no port/host (the listener is ours — new open decision
+      **O4**), and one transport serves exactly one session, so many clients means
+      a `sessionID → (Server, transport)` table over one shared state core.
 
 ### Step 1 — Package skeleton
 - [ ] `Package.swift` with the five targets plus two test targets, `.macOS(.v26)`,
-      Swift 6 language mode.
+      Swift 6 language mode. Manifest must declare
+      `// swift-tools-version:6.2` — `.macOS(.v26)` is unavailable at 6.1.
+      Pin swift-sdk to `0.12.1`.
+- [ ] Use `Tool.Content.text(text:annotations:_meta:)`; the bare
+      `.text("…")` form is deprecated in 0.12.1.
 - [ ] Enforce the `PippinCore` import boundary (no SwiftUI / AppKit / MCP).
 - Validation: `swift build && swift test` (trivially green).
 
@@ -53,8 +59,18 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   pruning, and hint coverage.
 
 ### Step 4 — Server, transport, validators
-- [ ] `ServerHost` actor owning server, registry, token store, audit log.
-- [ ] `StatefulHTTPServerTransport` on `127.0.0.1`; port fallback to ephemeral.
+> **Blocked on parent open decision O4** (how the HTTP listener is provided).
+> Steps 1–3 and gate G1 are unaffected; do those first.
+
+- [ ] `ServerHost` actor owning the *shared* core — registry, token store, audit
+      log, confirm-token store, config — plus the session table
+      `sessionID → (Server, StatefulHTTPServerTransport)`. One `Server` is built
+      per connecting client and injected with the shared core; the transport
+      itself carries no cross-client state.
+- [ ] HTTP listener bound to `127.0.0.1` per O4; port fallback to ephemeral.
+      Route by the `Mcp-Session-Id` header; an `initialize` without one mints a
+      session. Pipe `HTTPResponse.stream` to the client for SSE. Sweep sessions
+      past a timeout, and close on DELETE.
 - [ ] `TokenStore`: token → capability set. Provision one token with the full
       set; thread the capability set through to the registry. AC11 / S9.
 - [ ] Bearer-token and Origin validators.

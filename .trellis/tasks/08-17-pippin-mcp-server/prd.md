@@ -202,9 +202,12 @@ O1–O3 answered by the user in `addendum-2026-08-18.md` §1.
 
 - [x] **O1 — Dependency approved.** `modelcontextprotocol/swift-sdk` as the sole
       third-party dependency. It supplies the protocol types, tool annotations,
-      `StatefulHTTPServerTransport` (binds `127.0.0.1`, session management, SSE,
-      and an `HTTPRequestValidator` pipeline for the bearer-token and Origin
-      checks) and `StdioTransport` for the shim.
+      `StatefulHTTPServerTransport` (session management, SSE framing, and an
+      `HTTPRequestValidator` pipeline for the bearer-token and Origin checks) and
+      `StdioTransport` for the shim. Corrected 2026-08-23 against the 0.12.1
+      source: the transport does **not** bind a socket — it has no port or host
+      parameter and is an `HTTPRequest → HTTPResponse` handler. The listener is
+      ours to provide, which is what O4 decides.
 - [x] **O2 — Free-tier self-signed identity.** No paid Apple Developer account,
       so `Scripts/setup_dev_signing.sh` takes the fixed self-signed keychain
       identity path. Developer ID and notarization are out of reach and out of
@@ -213,6 +216,30 @@ O1–O3 answered by the user in `addendum-2026-08-18.md` §1.
 - [x] **O3 — Budget approved with the batch-one figure raised to 6 KB.** See A3
       for the reasoning. Long-term figures unchanged.
 
+### Open
+
+- [ ] **O4 — How the HTTP listener is provided.** Raised 2026-08-23 by step-0
+      verification (`../08-17-pippin-skeleton-transport/research/swift-sdk-surface.md`).
+      swift-sdk ships no HTTP server, so C5's "exactly one dependency" cannot be
+      read as "no listener work". Three options, all compatible with everything
+      else already decided:
+
+      1. **swift-nio + NIOHTTP1** — what the SDK's own conformance server uses.
+         Battle-tested HTTP/1.1 and SSE. Costs a second declared dependency,
+         though `swift-nio` is *already* in `Package.resolved` transitively via
+         swift-sdk, so it adds a manifest line and a build, not a new package in
+         the resolution graph.
+      2. **Network.framework (`NWListener`)** — zero new dependencies, first-party,
+         already linked by any macOS app. Costs hand-written HTTP/1.1 request
+         parsing and SSE chunk framing: a few hundred lines we then own and must
+         keep correct, on the process's one network-facing surface.
+      3. **Defer the HTTP listener; ship stdio first.** Batch one exposes only
+         `StdioTransport`, one process per client. Cheapest path to a working
+         Reminders slice, but it forfeits the single-resident-process property
+         that the shared `EKEventStore`, confirm-token store, and audit log were
+         designed around — i.e. it defers the architecture, not just the code.
+
+      Blocks skeleton step 4. Steps 1–3 and G1 are unaffected and can proceed.
 ## Relationship to Task `00-bootstrap-guidelines`
 
 `AGENTS.md` still carries TODO placeholders (Product, Project Phase, Coding
