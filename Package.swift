@@ -39,7 +39,7 @@ let package = Package(
             ]
         ),
 
-        .executableTarget(name: "PippinApp", dependencies: ["PippinServer"]),
+        .executableTarget(name: "PippinApp", dependencies: ["PippinCore", "PippinServer"]),
 
         .target(
             name: "PippinShim",
@@ -50,6 +50,10 @@ let package = Package(
 
         .testTarget(name: "PippinCoreTests", dependencies: ["PippinCore"]),
         .testTarget(name: "PippinServerTests", dependencies: ["PippinServer"]),
+        .testTarget(
+            name: "PippinAppTests",
+            dependencies: ["PippinApp", "PippinCore", "PippinServer"]
+        ),
         .testTarget(
             name: "PippinShimTests",
             dependencies: ["PippinShim", "PippinServer", "PippinCore", .product(name: "MCP", package: "swift-sdk")]

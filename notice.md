@@ -90,6 +90,29 @@ the system frameworks.
   and disconnects. Preserve the timeout and the regression tests when changing
   lifecycle code.
 
+## GUI and permission reporting
+
+- `SystemPermissionProvider` is non-prompting. Status rendering must never call
+  an EventKit request-access API or launch another app.
+- Reminders reports `EKEventStore.authorizationStatus(for: .reminder)`. Mail
+  Automation is target-specific and queried with
+  `AEDeterminePermissionToAutomateTarget(..., askUserIfNeeded: false)` only when
+  Mail already runs; otherwise it is `unavailable`.
+- macOS exposes no ordinary-app API for global Full Disk Access state. Pippin's
+  `full_disk_access` wire field is only an effective, read-only probe of the
+  existing `~/Library/Mail` directory. The GUI deliberately labels it **Mail
+  Data** and must not claim broader certainty.
+- `ServerHost` receives a `PermissionProviding` dependency, so unit tests use a
+  fixed snapshot and never touch live TCC. `pippin_status` is the only batch-one
+  production tool and includes this compact permission snapshot.
+- The menu and Settings share one `@MainActor @Observable` presentation mirror;
+  resident actors remain authoritative. Settings updates validate and atomically
+  save `Config`, then call `ServerHost.updateConfig`, and update the mirror only
+  after both succeed. Preserve that order to avoid disk/runtime divergence.
+- Use native SwiftUI controls and system surfaces. macOS 26 supplies Liquid
+  Glass automatically; do not add custom chrome, hand-drawn backgrounds, or a
+  manual glass effect to content.
+
 ## Secrets
 
 The repository is public. `.gitignore` denies keys, certificates, keychains,

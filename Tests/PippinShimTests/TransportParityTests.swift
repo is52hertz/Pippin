@@ -8,13 +8,24 @@ import Testing
 
 @Suite("Shim and direct HTTP parity", .serialized)
 struct TransportParityTests {
+    private struct TestPermissionProvider: PermissionProviding {
+        func currentPermissions() async -> PermissionSnapshot {
+            PermissionSnapshot(
+                reminders: .notDetermined,
+                mailAutomation: .unavailable,
+                fullDiskAccess: .unavailable
+            )
+        }
+    }
+
     @Test("direct HTTP and shim expose the same tools/list surface", .timeLimit(.minutes(1)))
     func directAndShimToolsListParity() async throws {
         let credential = "test-only-parity-bearer"
         let host = ServerHost(
             config: Config(),
             tokenStore: .local(token: credential),
-            registry: ProductionToolCatalogue.registry
+            registry: ProductionToolCatalogue.registry,
+            permissionProvider: TestPermissionProvider()
         )
         let listener = HTTPListener(host: "127.0.0.1", port: 0, serverHost: host)
         let port = try await listener.start()

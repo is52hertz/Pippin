@@ -11,6 +11,7 @@ public struct StatusSnapshot: Sendable {
     public let modules: [String: Config.ModuleConfig]
     public let sessionCount: Int
     public let capabilities: Capabilities
+    public let permissions: PermissionSnapshot
 
     public init(
         version: String,
@@ -18,7 +19,8 @@ public struct StatusSnapshot: Sendable {
         port: Int,
         modules: [String: Config.ModuleConfig],
         sessionCount: Int,
-        capabilities: Capabilities
+        capabilities: Capabilities,
+        permissions: PermissionSnapshot
     ) {
         self.version = version
         self.host = host
@@ -26,6 +28,7 @@ public struct StatusSnapshot: Sendable {
         self.modules = modules
         self.sessionCount = sessionCount
         self.capabilities = capabilities
+        self.permissions = permissions
     }
 
     /// The rendered payload, before pruning.
@@ -35,6 +38,7 @@ public struct StatusSnapshot: Sendable {
             "endpoint": .string("http://\(host):\(port)/mcp"),
             "sessions": .int(sessionCount),
             "capabilities": .array(capabilities.sorted().map { .string($0.rawValue) }),
+            "permissions": permissions.json,
             "modules": .object(modules.mapValues { module in
                 .object([
                     "enabled": .bool(module.enabled),
@@ -54,7 +58,7 @@ public enum StatusTool {
             title: "Pippin Status",
             // Terse by policy: this description is re-sent on every request of
             // every session, so prose here is a recurring cost.
-            description: "Report Pippin's version, endpoint, enabled modules, and what this connection may do.",
+            description: "Report Pippin's version, endpoint, modules, permissions, and what this connection may do.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([:]),
@@ -77,7 +81,57 @@ public enum StatusTool {
                         "items": .object(["type": .string("string")]),
                     ]),
                     "modules": .object(["type": .string("object")]),
+                    "permissions": .object([
+                        "type": .string("object"),
+                        "properties": .object([
+                            "reminders": .object([
+                                "type": .string("string"),
+                                "enum": .array([
+                                    .string("not_determined"),
+                                    .string("denied"),
+                                    .string("restricted"),
+                                    .string("write_only"),
+                                    .string("granted"),
+                                    .string("unknown"),
+                                ]),
+                            ]),
+                            "mail_automation": .object([
+                                "type": .string("string"),
+                                "enum": .array([
+                                    .string("not_determined"),
+                                    .string("denied"),
+                                    .string("granted"),
+                                    .string("unavailable"),
+                                    .string("unknown"),
+                                ]),
+                            ]),
+                            "full_disk_access": .object([
+                                "type": .string("string"),
+                                "enum": .array([
+                                    .string("granted"),
+                                    .string("denied"),
+                                    .string("unavailable"),
+                                    .string("unknown"),
+                                ]),
+                            ]),
+                        ]),
+                        "required": .array([
+                            .string("reminders"),
+                            .string("mail_automation"),
+                            .string("full_disk_access"),
+                        ]),
+                        "additionalProperties": .bool(false),
+                    ]),
                 ]),
+                "required": .array([
+                    .string("version"),
+                    .string("endpoint"),
+                    .string("sessions"),
+                    .string("capabilities"),
+                    .string("modules"),
+                    .string("permissions"),
+                ]),
+                "additionalProperties": .bool(false),
             ])
         ),
         module: nil,

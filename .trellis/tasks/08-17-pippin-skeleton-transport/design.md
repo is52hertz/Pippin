@@ -186,15 +186,49 @@ rules get violated.
 `MenuBarExtra` with a `Settings` scene. Content:
 
 - Server: running state, bound port, connected session count.
-- Permissions: one row per TCC grant with its real state, distinguishing *not
-  determined* from *denied*, and a button opening the relevant System Settings
-  pane.
+- Permissions: one row per relevant grant with its real state and a button
+  opening the relevant System Settings pane. Reading a status must never prompt
+  for access or launch another app.
 - Modules: per-module enable toggle and write toggle.
 
+Permission reporting is deliberately narrower than the label "TCC status" can
+suggest:
+
+| Row / status key | Source | Honest states |
+|---|---|---|
+| Reminders / `reminders` | `EKEventStore.authorizationStatus(for: .reminder)` | `not_determined`, `denied`, `restricted`, `write_only`, `granted` |
+| Mail Automation / `mail_automation` | `AEDeterminePermissionToAutomateTarget(..., askUserIfNeeded: false)` when Mail is already running | `not_determined`, `denied`, `granted`; `unavailable` when a non-prompting determination cannot be made |
+| Mail Data / `full_disk_access` | read-only effective-access probe of the existing Mail data directory | `granted`, `denied`, `unavailable`, `unknown` |
+
+macOS exposes no ordinary-app API for a global Full Disk Access status. The Mail
+Data row therefore reports only whether Pippin can currently read the protected
+Mail directory; it must not claim more. Apple Events permission is target-specific
+and its non-prompting API requires the target to be running, so the UI says
+"Mail Automation" rather than "Automation" and does not launch Mail merely to
+produce a status.
+
+The same compact permission snapshot is included in `pippin_status` under
+`permissions`. Permission probes are injected into `ServerHost`, so server tests
+use a deterministic provider and never touch TCC.
+
+The settings source of truth remains `Config` on disk plus the resident
+`ServerHost`. A toggle first validates and atomically saves the new config, then
+calls `ServerHost.updateConfig`; only after both succeed does the UI mirror
+advance. That update re-derives each session's visible registry and emits
+`notifications/tools/list_changed` where the visible set changed. Failed saves
+are shown to the user and leave the previous config active.
+
+`PippinApp` owns one `@MainActor @Observable` model shared by the menu-bar and
+Settings scenes. The resident runtime remains the owner of server state; the UI
+model is only a presentation mirror. Permission and runtime refreshes are
+explicit/on-appearance rather than a tight polling loop.
+
 HIG compliance is a deliverable, not a polish pass: standard SwiftUI controls,
-system materials, no hand-drawn backgrounds or custom window chrome. Consult
-`apple-skills:hig` and `apple-skills:ios-liquid-glass` during implementation, not
-after.
+`Form`, `Section`, `Toggle`, `Button`, `SettingsLink`, system materials, no
+hand-drawn backgrounds or custom window chrome. macOS 26 applies Liquid Glass to
+standard controls and system surfaces automatically; Pippin does not apply a
+glass effect to content. Consult `apple-skills:hig` and
+`apple-skills:ios-liquid-glass` during implementation, not after.
 
 ## 8. Risks
 

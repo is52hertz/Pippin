@@ -48,6 +48,7 @@ public actor ServerHost {
     private let configuration: Configuration
     private let tokenStore: TokenStore
     private let registry: ToolRegistry
+    private let permissionProvider: any PermissionProviding
     private let logger: Logger
 
     /// Shared across every session. This is what the resident process is for:
@@ -67,6 +68,7 @@ public actor ServerHost {
         config: Config,
         tokenStore: TokenStore,
         registry: ToolRegistry,
+        permissionProvider: any PermissionProviding,
         configuration: Configuration = .init(),
         audit: AuditLog = AuditLog(),
         logger: Logger = Logger(label: "pippin.server")
@@ -75,6 +77,7 @@ public actor ServerHost {
         self.config = config
         self.tokenStore = tokenStore
         self.registry = registry
+        self.permissionProvider = permissionProvider
         self.configuration = configuration
         self.logger = logger
     }
@@ -290,13 +293,15 @@ public actor ServerHost {
 
         switch params.name {
         case StatusTool.name:
+            let permissions = await permissionProvider.currentPermissions()
             let snapshot = StatusSnapshot(
                 version: configuration.version,
                 host: boundHost,
                 port: boundPort,
                 modules: config.modules,
                 sessionCount: sessions.count,
-                capabilities: capabilities
+                capabilities: capabilities,
+                permissions: permissions
             )
             // Bind to Value? explicitly: passing a Value directly also matches
             // the SDK's generic Codable overload, which is throwing.
@@ -347,6 +352,17 @@ public actor ServerHost {
 
     public var sessionCount: Int { sessions.count }
     public var currentConfig: Config { config }
+
+    public func snapshot() async -> ServerSnapshot {
+        let permissions = await permissionProvider.currentPermissions()
+        return ServerSnapshot(
+            host: boundHost,
+            port: boundPort,
+            sessionCount: sessions.count,
+            config: config,
+            permissions: permissions
+        )
+    }
 
     /// Replaces the in-memory config after validation, then tells every session
     /// whose visible tool surface changed to list tools again.

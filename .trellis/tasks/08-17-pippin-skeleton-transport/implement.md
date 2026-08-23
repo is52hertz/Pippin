@@ -189,12 +189,37 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   `pippin_status`; the direct-HTTP parity test observed the same `tools/list`.
 
 ### Step 8 — GUI
-- [ ] `MenuBarExtra`: server status, port, session count, permission rows with
-      real states, module toggles.
-- [ ] `Settings` scene.
-- [ ] Buttons opening the relevant System Settings panes.
+- [x] Add a non-prompting permission provider and compact permission DTO. Report
+      Reminders from EventKit, per-target Mail Automation only when Mail is
+      already running, and effective read access to the existing Mail data
+      directory. Never launch an app or request permission while rendering
+      status. Inject the provider so tests never touch TCC.
+- [x] Extend `pippin_status` and its output schema with `permissions`; cover every
+      state mapping and deterministic structured output in tests.
+- [x] Replace the placeholder menu with a standard-control `MenuBarExtra` showing
+      server state, bound port, session count, permission rows, and modules.
+- [x] Add a native `Settings` scene with module enable/write toggles. Persist a
+      validated config before applying it to the resident host; surface failures
+      without advancing the UI mirror. Verify a visible-tool change emits
+      `notifications/tools/list_changed` through the existing server path.
+- [x] Add buttons opening the relevant Privacy & Security panes. Label the
+      target-specific Apple Events row "Mail Automation" and the effective FDA
+      probe "Mail Data" so the UI does not overstate what macOS exposes.
+- [ ] Add focused tests for permission mapping, status serialization, config
+      update success/failure, and UI-model state transitions. Package the signed
+      app and manually verify menu-bar-only (`LSUIElement`) behaviour, Settings /
+      Command-comma, standard controls/materials, light/dark appearance, and that
+      opening/refreshing the UI causes no TCC prompt.
 - Validation: consult `apple-skills:hig` and `apple-skills:ios-liquid-glass`,
       then review against them. AC7, AC10.
+
+Automated and source-level evidence is recorded in
+`research/step8-gui-verification.md`. The focused tests, signed package,
+LaunchServices `UIElement` classification, live `pippin_status`, non-launch of
+Mail, HIG/source review, and independent Trellis check all pass. The final box
+remains open only for the user's visual confirmation of the menu-bar popup,
+Settings window, and no-prompt behaviour; the UI automation driver cannot attach
+to an unopened `LSUIElement` status item.
 
 ### Step 9 — Integration and full-scope check
 - [ ] Connect Claude Code over HTTP and over the shim; confirm identical tool

@@ -9,6 +9,17 @@ import Testing
 struct ServerHostTests {
     private static let broadToken = "broad-token"
     private static let narrowToken = "narrow-token"
+    private static let permissions = PermissionSnapshot(
+        reminders: .notDetermined,
+        mailAutomation: .unavailable,
+        fullDiskAccess: .denied
+    )
+
+    private struct TestPermissionProvider: PermissionProviding {
+        let snapshot: PermissionSnapshot
+
+        func currentPermissions() async -> PermissionSnapshot { snapshot }
+    }
 
     private func makeHost(
         config: Config = Config(),
@@ -20,7 +31,8 @@ struct ServerHostTests {
                 Self.broadToken: TokenIdentity(label: "local", capabilities: .all),
                 Self.narrowToken: TokenIdentity(label: "remote", capabilities: .readOnly),
             ]),
-            registry: registry
+            registry: registry,
+            permissionProvider: TestPermissionProvider(snapshot: Self.permissions)
         )
     }
 
@@ -165,6 +177,15 @@ struct ServerHostTests {
         let host = makeHost()
         #expect(await host.tools(for: .all).map(\.name) == ["pippin_status"])
         #expect(await host.tools(for: []).isEmpty)
+    }
+
+    @Test("live snapshot uses the injected permission provider")
+    func snapshotUsesInjectedPermissions() async {
+        let snapshot = await makeHost().snapshot()
+
+        #expect(snapshot.permissions == Self.permissions)
+        #expect(snapshot.config == Config())
+        #expect(snapshot.sessionCount == 0)
     }
 
     @Test("a valid config change is visible to the shared core")
