@@ -24,15 +24,21 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
       **O4**), and one transport serves exactly one session, so many clients means
       a `sessionID → (Server, transport)` table over one shared state core.
 
-### Step 1 — Package skeleton
-- [ ] `Package.swift` with the five targets plus two test targets, `.macOS(.v26)`,
-      Swift 6 language mode. Manifest must declare
-      `// swift-tools-version:6.2` — `.macOS(.v26)` is unavailable at 6.1.
-      Pin swift-sdk to `0.12.1`.
-- [ ] Use `Tool.Content.text(text:annotations:_meta:)`; the bare
-      `.text("…")` form is deprecated in 0.12.1.
-- [ ] Enforce the `PippinCore` import boundary (no SwiftUI / AppKit / MCP).
-- Validation: `swift build && swift test` (trivially green).
+### Step 1 — Package skeleton  ✅ done 2026-08-23
+- [x] `Package.swift`: tools `6.2` (`.macOS(.v26)` is unavailable at 6.1), five
+      targets plus two test targets, `swiftLanguageModes: [.v6]`. swift-sdk pinned
+      `exact: "0.12.1"`; swift-nio `from: "2.101.3"` on `PippinServer` only (O4).
+      `Package.resolved` committed.
+- [x] `PippinCore` import boundary enforced two ways: the dependency graph makes
+      MCP and NIO unreachable, and `ImportBoundaryTests` scans the sources for
+      SwiftUI / AppKit / Cocoa, which the graph cannot block. Negative case
+      verified — adding `import SwiftUI` to `PippinCore` fails the suite.
+- [x] Validation: `swift build` and `swift test` both green (3 tests, 2 suites).
+- Carried to later steps: use `Tool.Content.text(text:annotations:_meta:)`; the
+  bare `.text("…")` form is deprecated in 0.12.1.
+- Deliberately deferred: `PippinApp` is a minimal `MenuBarExtra` with Quit — just
+  enough for step 2 to produce a launchable bundle. The real status UI is step 8.
+  `pippin-shim` exits with a "not implemented (step 7)" message.
 
 ### Step 2 — Packaging and signing
 - [ ] Adapt `setup_dev_signing.sh` from `apple-skills:guide-macos-spm-packaging`
