@@ -10,14 +10,17 @@ struct ServerHostTests {
     private static let broadToken = "broad-token"
     private static let narrowToken = "narrow-token"
 
-    private func makeHost() -> ServerHost {
+    private func makeHost(
+        config: Config = Config(),
+        registry: ToolRegistry = ProductionToolCatalogue.registry
+    ) -> ServerHost {
         ServerHost(
-            config: Config(),
+            config: config,
             tokenStore: TokenStore([
                 Self.broadToken: TokenIdentity(label: "local", capabilities: .all),
                 Self.narrowToken: TokenIdentity(label: "remote", capabilities: .readOnly),
             ]),
-            registry: ToolRegistry(catalogue: [StatusTool.definition])
+            registry: registry
         )
     }
 
@@ -42,6 +45,7 @@ struct ServerHostTests {
     }
 
     private static let initializeBody = #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}"#
+    private static let initializedBody = #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#
 
     /// Case-insensitive: HTTPResponse.headers is a plain dictionary, and the SDK
     /// spells the header "MCP-Session-Id" while the spec is case-agnostic.
@@ -52,6 +56,38 @@ struct ServerHostTests {
     private func openSession(on host: ServerHost, token: String) async throws -> String {
         let response = await host.handle(request(token: token))
         return try #require(sessionID(of: response))
+    }
+
+    private func completeInitialization(on host: ServerHost, token: String) async throws -> String {
+        let sessionID = try await openSession(on: host, token: token)
+        let response = await host.handle(
+            request(token: token, sessionID: sessionID, body: Self.initializedBody)
+        )
+        #expect(response.statusCode == 202)
+        return sessionID
+    }
+
+    private func notificationStream(
+        on host: ServerHost,
+        token: String,
+        sessionID: String
+    ) async -> AsyncThrowingStream<Data, Swift.Error>? {
+        let response = await host.handle(
+            request(method: "GET", token: token, sessionID: sessionID, body: nil)
+        )
+        guard case .stream(let stream, _) = response else {
+            Issue.record("Expected a standalone SSE stream")
+            return nil
+        }
+        return stream
+    }
+
+    private func text(in stream: AsyncThrowingStream<Data, Swift.Error>) async throws -> String {
+        var chunks: [Data] = []
+        for try await chunk in stream {
+            chunks.append(chunk)
+        }
+        return chunks.map { String(decoding: $0, as: UTF8.self) }.joined()
     }
 
     @Test("a request with no token is refused before routing")
@@ -131,11 +167,71 @@ struct ServerHostTests {
         #expect(await host.tools(for: []).isEmpty)
     }
 
-    @Test("a config change is visible to the shared core")
-    func configUpdateIsShared() async {
+    @Test("a valid config change is visible to the shared core")
+    func configUpdateIsShared() async throws {
         let host = makeHost()
-        await host.updateConfig(Config(modules: ["reminders": .init(enabled: false, writes: false)]))
+        try await host.updateConfig(
+            Config(modules: ["reminders": .init(enabled: false, writes: false)])
+        )
         // Shared, not per-session: both connected clients read the same config.
         #expect(await host.currentConfig.modules["reminders"]?.enabled == false)
+    }
+
+    @Test("an invalid config is rejected before shared state changes")
+    func invalidConfigDoesNotMutateState() async {
+        let host = makeHost()
+        let original = await host.currentConfig
+        var invalid = original
+        invalid.http.bind = "0.0.0.0"
+
+        await #expect(throws: PippinError.self) {
+            try await host.updateConfig(invalid)
+        }
+        #expect(await host.currentConfig == original)
+    }
+
+    @Test("a tool-surface change notifies every affected active session over SDK transport")
+    func configUpdateEmitsListChanged() async throws {
+        let initialConfig = Config(modules: [
+            "reminders": .init(enabled: true, writes: false),
+            "mail": .init(enabled: true, writes: false),
+        ])
+        let host = makeHost(config: initialConfig, registry: SyntheticToolCatalogue.registry)
+
+        let firstBroadID = try await completeInitialization(on: host, token: Self.broadToken)
+        let secondBroadID = try await completeInitialization(on: host, token: Self.broadToken)
+        let narrowID = try await completeInitialization(on: host, token: Self.narrowToken)
+
+        let firstBroadStream = try #require(
+            await notificationStream(on: host, token: Self.broadToken, sessionID: firstBroadID)
+        )
+        let secondBroadStream = try #require(
+            await notificationStream(on: host, token: Self.broadToken, sessionID: secondBroadID)
+        )
+        let narrowStream = try #require(
+            await notificationStream(on: host, token: Self.narrowToken, sessionID: narrowID)
+        )
+
+        var updatedConfig = initialConfig
+        updatedConfig.modules["reminders"]?.writes = true
+        try await host.updateConfig(updatedConfig)
+
+        #expect(
+            await host.tools(for: .all).map(\.name).contains("pippin_reminders_create")
+        )
+        #expect(
+            await host.tools(for: .readOnly).map(\.name).contains("pippin_reminders_create") == false
+        )
+
+        // Closing the transports finishes their SSE streams, letting the test
+        // inspect every buffered event without sleeps or timing assumptions.
+        await host.shutdown()
+        let firstBroadText = try await text(in: firstBroadStream)
+        let secondBroadText = try await text(in: secondBroadStream)
+        let narrowText = try await text(in: narrowStream)
+
+        #expect(firstBroadText.contains(ToolListChangedNotification.name))
+        #expect(secondBroadText.contains(ToolListChangedNotification.name))
+        #expect(narrowText.contains(ToolListChangedNotification.name) == false)
     }
 }

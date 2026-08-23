@@ -53,6 +53,22 @@ decision.
 blocks the SDK and NIO; `Tests/PippinCoreTests/ImportBoundaryTests.swift` covers
 the system frameworks.
 
+## Tool surface
+
+- `ProductionToolCatalogue` is the one production catalogue. App modules add
+  their `ToolDefinition`s there; the app and the automated token-budget checks
+  both consume that same source, so registration and budget accounting cannot
+  drift apart.
+- Tool visibility is derived purely from `(Config, Capabilities)`. A disabled
+  module contributes nothing; writes-off contributes read-only tools only.
+  Never add a present-but-refusing tool as a substitute for absence — it would
+  remain in the recurring token budget and in the agent's candidate set.
+- `ServerHost.updateConfig` validates before changing shared state and emits
+  `notifications/tools/list_changed` only to sessions whose visible tool list
+  actually changed. Persistence remains `Config.save`'s responsibility.
+- Automated ceilings: serialized batch-one `tools/list` ≤ 6 KiB, each tool
+  description ≤ 200 characters, and the long-term default catalogue ≤ 40 tools.
+
 ## Secrets
 
 The repository is public. `.gitignore` denies keys, certificates, keychains,

@@ -1,4 +1,3 @@
-import MCP
 import PippinCore
 import Testing
 
@@ -6,23 +5,7 @@ import Testing
 
 @Suite("Tool registry gating")
 struct ToolRegistryTests {
-    /// A catalogue with one tool per capability so gating has something to gate.
-    /// Batch one ships only `pippin_status`, so the real catalogue cannot
-    /// distinguish a read-only tier from a full one; the logic under test is the
-    /// registry's, and it needs inputs that differ.
-    private static func tool(_ name: String) -> Tool {
-        Tool(name: name, description: nil, inputSchema: .object([:]))
-    }
-
-    private static let catalogue: [ToolDefinition] = [
-        StatusTool.definition,
-        ToolDefinition(tool: tool("pippin_reminders_search"), module: "reminders", requiredCapability: .read),
-        ToolDefinition(tool: tool("pippin_reminders_create"), module: "reminders", requiredCapability: .write),
-        ToolDefinition(tool: tool("pippin_reminders_delete"), module: "reminders", requiredCapability: .destructive),
-        ToolDefinition(tool: tool("pippin_mail_search"), module: "mail", requiredCapability: .read),
-    ]
-
-    private static let registry = ToolRegistry(catalogue: catalogue)
+    private static let registry = SyntheticToolCatalogue.registry
 
     private static func names(config: Config, capabilities: Capabilities) -> [String] {
         registry.tools(config: config, capabilities: capabilities).map(\.name)
@@ -128,8 +111,11 @@ struct ToolRegistryTests {
     func batchOneCatalogue() {
         // Scope guard: module tools belong to the module child tasks, and a stub
         // added here would be indistinguishable from a real one to a client.
-        let shipped = ToolRegistry(catalogue: [StatusTool.definition])
-        #expect(shipped.tools(config: Self.config(), capabilities: .all) .map(\.name) == ["pippin_status"])
+        #expect(
+            ProductionToolCatalogue.registry
+                .tools(config: Self.config(), capabilities: .all)
+                .map(\.name) == ["pippin_status"]
+        )
     }
 
     @Test("the tool list is ordered deterministically")

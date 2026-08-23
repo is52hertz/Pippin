@@ -68,7 +68,7 @@ actor ServerRuntime {
         let host = ServerHost(
             config: config,
             tokenStore: .local(token: token),
-            registry: ToolRegistry(catalogue: [StatusTool.definition])
+            registry: ProductionToolCatalogue.registry
         )
         self.host = host
 

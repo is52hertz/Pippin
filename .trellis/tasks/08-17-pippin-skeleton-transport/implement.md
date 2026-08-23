@@ -41,13 +41,13 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   `pippin-shim` exits with a "not implemented (step 7)" message.
 
 ### Step 2 — Packaging and signing  ✅ done 2026-08-23 · gate G1 passed
-- [ ] Adapt `setup_dev_signing.sh` from `apple-skills:guide-macos-spm-packaging`
+- [x] Adapt `setup_dev_signing.sh` from `apple-skills:guide-macos-spm-packaging`
       for the self-signed path only; make it idempotent and refuse to overwrite an
       existing identity. Drop the Developer ID and notarization branches — they
       are permanently out of scope, and dead signing code here is a live footgun.
-- [ ] Adapt `package_app.sh` with `MENU_BAR_APP=1`, `version.env`, and the full
+- [x] Adapt `package_app.sh` with `MENU_BAR_APP=1`, `version.env`, and the full
       `Info.plist` key set; place `pippin-shim` inside the bundle.
-- [ ] Adapt `compile_and_run.sh`.
+- [x] Adapt `compile_and_run.sh`.
 - Validation:
   ```bash
   Scripts/package_app.sh
@@ -131,16 +131,29 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   the four bugs it surfaced are recorded in
   `research/g2-primitive-api-freeze.md`.
 
-### Step 6 — Tool registry and gating
-- [ ] `(Config, Capabilities) → [Tool]` as a pure function.
-- [ ] Gating: disabled module contributes nothing; writes-off contributes
-      read-only tools only.
-- [ ] Emit `notifications/tools/list_changed` on config change.
-- [ ] `tools/list` byte-budget test against the parent A3 figure (6 KB batch one;
-      the skeleton alone should be far under it, so the test's job here is to
-      exist and be wired, ready for the module children to push against).
-- Validation: `swift test`; then live — toggle a module and confirm the client's
-      tool list changes without restarting. AC6.
+### Step 6 — Tool registry and gating  ✅ done 2026-08-23
+- [x] **Already existed (landed with step 4, retained unchanged):**
+      `(Config, Capabilities) → [Tool]` as a pure function, with disabled-module,
+      writes-off, and caller-capability gating covered by unit tests.
+- [x] **New:** one `ProductionToolCatalogue` is consumed by both `PippinApp` and
+      the budget suite. It intentionally contains only `pippin_status`; no module
+      stubs were added.
+- [x] **New:** `ServerHost.updateConfig` validates before replacing shared state,
+      re-derives each session's visible list, and sends
+      `notifications/tools/list_changed` to every affected active session.
+      Persistence remains owned by `Config.save` rather than the server actor.
+- [x] **New:** reusable production-catalogue budget coverage enforces a serialized
+      `tools/list` response ≤ 6 KiB, descriptions ≤ 200 characters, and the
+      long-term count ceiling of 40 tools.
+- [x] **Validation:** `swift build` passed; `swift test` passed with **156 tests
+      in 19 suites**. A test-only synthetic catalogue proves module/write gating.
+      A live SDK transport test opens three MCP sessions and their standalone SSE
+      streams, then proves both affected full-capability sessions receive
+      `ToolListChangedNotification` while the unaffected read-only session does
+      not.
+- Actual Reminders/Mail disappearance cannot be exercised until those module
+  catalogues exist; it remains an integration check for their module work and
+  step 9. No packaged-bundle module tool was fabricated for this step.
 
 ### Step 7 — Shim
 - [ ] `pippin-shim`: read `endpoint.json`, launch the app if needed, bounded

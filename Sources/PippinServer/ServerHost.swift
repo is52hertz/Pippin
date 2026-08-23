@@ -348,8 +348,46 @@ public actor ServerHost {
     public var sessionCount: Int { sessions.count }
     public var currentConfig: Config { config }
 
-    public func updateConfig(_ newConfig: Config) {
+    /// Replaces the in-memory config after validation, then tells every session
+    /// whose visible tool surface changed to list tools again.
+    ///
+    /// Persistence remains `Config.save`'s responsibility. Keeping it out of the
+    /// host lets a future Settings caller decide when to persist without giving
+    /// the server actor a second source of configuration truth.
+    public func updateConfig(_ newConfig: Config) async throws {
+        // Validate before deriving effects or touching shared state. An invalid
+        // bind must not become the config observed by existing tool calls.
+        try newConfig.validate()
+        guard newConfig != config else { return }
+
+        let previousConfig = config
+        let affectedSessions = sessions.compactMap { id, session -> (String, Server)? in
+            let previousTools = registry.tools(
+                config: previousConfig,
+                capabilities: session.capabilities
+            )
+            let newTools = registry.tools(
+                config: newConfig,
+                capabilities: session.capabilities
+            )
+            return previousTools == newTools ? nil : (id, session.server)
+        }
+
         config = newConfig
+
+        // Try every affected session even if one transport has gone away. A
+        // disconnected transport is no longer an active observer and must not
+        // prevent the remaining clients from receiving their invalidation.
+        for (id, server) in affectedSessions {
+            do {
+                try await server.notify(ToolListChangedNotification.message())
+            } catch {
+                logger.warning("Could not notify session that tools changed", metadata: [
+                    "session": "\(id)",
+                    "error": "\(error)",
+                ])
+            }
+        }
     }
 
     public func tools(for capabilities: Capabilities) -> [Tool] {
