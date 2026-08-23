@@ -49,10 +49,10 @@ struct ImportBoundaryTests {
     func coreImportsStayClean() throws {
         let directory = Self.sourceDirectory
         let files = try FileManager.default
-            .subpathsOfDirectory(atPath: directory.path())
+            .subpathsOfDirectory(atPath: directory.path(percentEncoded: false))
             .filter { $0.hasSuffix(".swift") }
 
-        #expect(!files.isEmpty, "found no sources under \(directory.path()) — the test is not looking where it thinks")
+        #expect(!files.isEmpty, "found no sources under \(directory.path(percentEncoded: false)) — the test is not looking where it thinks")
 
         for file in files {
             let contents = try String(contentsOf: directory.appending(path: file), encoding: .utf8)

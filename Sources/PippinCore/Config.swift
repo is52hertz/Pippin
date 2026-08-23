@@ -138,7 +138,7 @@ extension Config {
     /// silent reset — quietly discarding the user's settings, and with them their
     /// write gates, is the wrong way to fail.
     public static func load(from url: URL = Config.defaultURL) throws -> Config {
-        guard FileManager.default.fileExists(atPath: url.path()) else {
+        guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
             return Config()
         }
         let data: Data
@@ -148,7 +148,7 @@ extension Config {
             throw PippinError(
                 .backendUnavailable,
                 detail: "config.json",
-                hint: "Could not read \(url.path()). Check file permissions."
+                hint: "Could not read \(url.path(percentEncoded: false)). Check file permissions."
             )
         }
         let config: Config
@@ -158,7 +158,7 @@ extension Config {
             throw PippinError(
                 .invalidArgument,
                 detail: "config.json",
-                hint: "\(url.path()) is not valid Pippin configuration. Fix or delete it to restore defaults."
+                hint: "\(url.path(percentEncoded: false)) is not valid Pippin configuration. Fix or delete it to restore defaults."
             )
         }
         try config.validate()

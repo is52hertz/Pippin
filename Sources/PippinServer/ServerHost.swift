@@ -1,0 +1,331 @@
+import Foundation
+import Logging
+import MCP
+import PippinCore
+
+/// The resident process's single owner of shared state, and the session table
+/// over it.
+///
+/// The MCP SDK's `StatefulHTTPServerTransport` serves exactly one session and
+/// rejects a second `initialize`, so several agents means several
+/// `Server`+transport pairs. What must *not* be several is everything below them:
+/// one `EKEventStore`, one confirm-token store, one audit log, one timeout
+/// regime. That is the whole reason this process is resident, and it is why the
+/// shared core lives here while only the server object, its transport, and the
+/// caller's resolved capability set are per-session.
+public actor ServerHost {
+    public struct Configuration: Sendable {
+        public var version: String
+        public var endpointPath: String
+        public var sessionTimeout: TimeInterval
+        public var sweepInterval: TimeInterval
+
+        public init(
+            version: String = "0.1.0",
+            endpointPath: String = "/mcp",
+            sessionTimeout: TimeInterval = 3600,
+            sweepInterval: TimeInterval = 60
+        ) {
+            self.version = version
+            self.endpointPath = endpointPath
+            self.sessionTimeout = sessionTimeout
+            self.sweepInterval = sweepInterval
+        }
+    }
+
+    private struct Session {
+        let server: Server
+        let transport: StatefulHTTPServerTransport
+        /// The token that opened this session. A session keeps the capabilities it
+        /// was created with, so it must also keep the token: otherwise a caller
+        /// could open a session with a broad token and carry on using it while
+        /// presenting a narrow one, and the narrowing would be cosmetic.
+        let token: String
+        let capabilities: Capabilities
+        var lastAccessed: Date
+    }
+
+    private let configuration: Configuration
+    private let tokenStore: TokenStore
+    private let registry: ToolRegistry
+    private let logger: Logger
+
+    private var config: Config
+    private var sessions: [String: Session] = [:]
+    private var boundPort: Int = 0
+    private var boundHost: String = "127.0.0.1"
+    private var sweepTask: Task<Void, Never>?
+
+    public init(
+        config: Config,
+        tokenStore: TokenStore,
+        registry: ToolRegistry,
+        configuration: Configuration = .init(),
+        logger: Logger = Logger(label: "pippin.server")
+    ) {
+        self.config = config
+        self.tokenStore = tokenStore
+        self.registry = registry
+        self.configuration = configuration
+        self.logger = logger
+    }
+
+    // MARK: - Lifecycle
+
+    public func setBoundAddress(host: String, port: Int) {
+        boundHost = host
+        boundPort = port
+    }
+
+    public func startSweeping() {
+        guard sweepTask == nil else { return }
+        sweepTask = Task { [weak self] in
+            guard let self else { return }
+            let interval = await self.configuration.sweepInterval
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(interval))
+                await self.sweepExpiredSessions()
+            }
+        }
+    }
+
+    public func shutdown() async {
+        sweepTask?.cancel()
+        sweepTask = nil
+        for id in sessions.keys {
+            await closeSession(id)
+        }
+    }
+
+    // MARK: - Request routing
+
+    /// The validation pipeline every session's transport runs.
+    ///
+    /// Order matters. The bearer check is first so an unauthenticated
+    /// `initialize` is refused before anything else inspects it, and the Origin
+    /// check is next so a browser page on this machine cannot reach the server
+    /// even while holding a leaked token.
+    public func validationPipeline() -> StandardValidationPipeline {
+        StandardValidationPipeline(validators: [
+            PippinBearerValidator(store: tokenStore),
+            OriginValidator.localhost(port: boundPort == 0 ? nil : boundPort),
+            AcceptHeaderValidator(mode: .sseRequired),
+            ContentTypeValidator(),
+            ProtocolVersionValidator(),
+            SessionValidator(),
+        ])
+    }
+
+    public func handle(_ request: HTTPRequest) async -> HTTPResponse {
+        // Authenticate before routing, so an unknown token cannot probe which
+        // session ids exist.
+        guard let token = PippinBearerValidator.bearerToken(in: request),
+              let identity = tokenStore.identity(for: token)
+        else {
+            return .error(statusCode: 401, .invalidRequest("Unauthorized"))
+        }
+
+        let sessionID = request.header("Mcp-Session-Id")
+
+        if let sessionID, var session = sessions[sessionID] {
+            guard session.token == token else {
+                // Presenting a different token than the one that opened the
+                // session would otherwise silently retain the original tier.
+                return .error(
+                    statusCode: 401,
+                    .invalidRequest("Unauthorized"),
+                    sessionID: nil
+                )
+            }
+            session.lastAccessed = Date()
+            sessions[sessionID] = session
+
+            let response = await session.transport.handleRequest(request)
+            if request.method == "DELETE" {
+                await closeSession(sessionID)
+            }
+            return response
+        }
+
+        if sessionID != nil {
+            // A session id we do not know: expired, swept, or from a previous run.
+            return .error(
+                statusCode: 404,
+                .invalidRequest("Not Found: Invalid or expired session ID")
+            )
+        }
+
+        guard request.method == "POST", isInitialize(request) else {
+            return .error(
+                statusCode: 400,
+                .invalidRequest("Bad Request: Missing Mcp-Session-Id header")
+            )
+        }
+
+        return await createSession(for: request, token: token, identity: identity)
+    }
+
+    private func isInitialize(_ request: HTTPRequest) -> Bool {
+        guard let body = request.body,
+              let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+        else { return false }
+        return json["method"] as? String == "initialize"
+    }
+
+    // MARK: - Sessions
+
+    private struct FixedSessionIDGenerator: SessionIDGenerator {
+        let sessionID: String
+        func generateSessionID() -> String { sessionID }
+    }
+
+    private func createSession(
+        for request: HTTPRequest,
+        token: String,
+        identity: TokenIdentity
+    ) async -> HTTPResponse {
+        let sessionID = UUID().uuidString
+        let transport = StatefulHTTPServerTransport(
+            sessionIDGenerator: FixedSessionIDGenerator(sessionID: sessionID),
+            validationPipeline: validationPipeline(),
+            logger: logger
+        )
+
+        let server = await makeServer(capabilities: identity.capabilities)
+
+        do {
+            try await server.start(transport: transport)
+        } catch {
+            await transport.disconnect()
+            return .error(statusCode: 500, .internalError("Could not start session"))
+        }
+
+        sessions[sessionID] = Session(
+            server: server,
+            transport: transport,
+            token: token,
+            capabilities: identity.capabilities,
+            lastAccessed: Date()
+        )
+
+        let response = await transport.handleRequest(request)
+        if case .error = response {
+            await closeSession(sessionID)
+        } else {
+            logger.info("Session opened", metadata: [
+                "session": "\(sessionID)",
+                "identity": "\(identity.label)",
+            ])
+        }
+        return response
+    }
+
+    private func makeServer(capabilities: Capabilities) async -> Server {
+        let server = Server(
+            name: "pippin",
+            version: configuration.version,
+            capabilities: .init(tools: .init(listChanged: true))
+        )
+
+        // Capabilities are captured per session, so the tool list this client
+        // sees is fixed to the tier of the token that opened the connection.
+        await server.withMethodHandler(ListTools.self) { [weak self] _ in
+            guard let self else { return ListTools.Result(tools: []) }
+            return ListTools.Result(tools: await self.visibleTools(for: capabilities))
+        }
+
+        await server.withMethodHandler(CallTool.self) { [weak self] params in
+            guard let self else {
+                throw PippinError(.backendUnavailable, detail: "server")
+            }
+            return try await self.call(params, capabilities: capabilities)
+        }
+
+        return server
+    }
+
+    private func visibleTools(for capabilities: Capabilities) -> [Tool] {
+        registry.tools(config: config, capabilities: capabilities)
+    }
+
+    private func call(_ params: CallTool.Parameters, capabilities: Capabilities) async throws -> CallTool.Result {
+        // Re-check visibility at call time. The registry already hides what a
+        // caller may not use, but a tool that is merely absent from a list is not
+        // the same as one that refuses to run, and only the second survives a
+        // client that cached an older list.
+        guard visibleTools(for: capabilities).contains(where: { $0.name == params.name }) else {
+            return Self.failure(PippinError(
+                .notFound,
+                detail: params.name,
+                hint: "No such tool is available to this connection. Call tools/list for the current set."
+            ))
+        }
+
+        switch params.name {
+        case StatusTool.name:
+            let snapshot = StatusSnapshot(
+                version: configuration.version,
+                host: boundHost,
+                port: boundPort,
+                modules: config.modules,
+                sessionCount: sessions.count,
+                capabilities: capabilities
+            )
+            // Bind to Value? explicitly: passing a Value directly also matches
+            // the SDK's generic Codable overload, which is throwing.
+            let structured: Value? = Value.pruned(snapshot.json)
+            return CallTool.Result(
+                content: [.text(text: "ok", annotations: nil, _meta: nil)],
+                structuredContent: structured
+            )
+        default:
+            return Self.failure(PippinError(.notFound, detail: params.name))
+        }
+    }
+
+    /// Tool failures travel as `isError: true` with the compact error body, not as
+    /// thrown protocol errors: the agent needs to read the code and the hint.
+    static func failure(_ error: PippinError) -> CallTool.Result {
+        let body = JSONValue.object([
+            "error": .object([
+                "code": .string(error.code.rawValue),
+                "detail": error.detail.map { JSONValue.string($0) } ?? .null,
+                "hint": .string(error.hint),
+            ])
+        ])
+        let structured: Value? = Value.pruned(body)
+        return CallTool.Result(
+            content: [.text(text: error.description, annotations: nil, _meta: nil)],
+            structuredContent: structured,
+            isError: true
+        )
+    }
+
+    // MARK: - Sweeping
+
+    private func sweepExpiredSessions() async {
+        let cutoff = Date().addingTimeInterval(-configuration.sessionTimeout)
+        for (id, session) in sessions where session.lastAccessed < cutoff {
+            logger.info("Session expired", metadata: ["session": "\(id)"])
+            await closeSession(id)
+        }
+    }
+
+    private func closeSession(_ id: String) async {
+        guard let session = sessions.removeValue(forKey: id) else { return }
+        await session.transport.disconnect()
+    }
+
+    // MARK: - Introspection
+
+    public var sessionCount: Int { sessions.count }
+    public var currentConfig: Config { config }
+
+    public func updateConfig(_ newConfig: Config) {
+        config = newConfig
+    }
+
+    public func tools(for capabilities: Capabilities) -> [Tool] {
+        visibleTools(for: capabilities)
+    }
+}

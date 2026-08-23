@@ -80,27 +80,30 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
       (including the falsy-value trap), hint coverage across every code, and
       pagination termination end to end.
 
-### Step 4 — Server, transport, validators
-> **Blocked on parent open decision O4** (how the HTTP listener is provided).
-> Steps 1–3 and gate G1 are unaffected; do those first.
-
-- [ ] `ServerHost` actor owning the *shared* core — registry, token store, audit
-      log, confirm-token store, config — plus the session table
-      `sessionID → (Server, StatefulHTTPServerTransport)`. One `Server` is built
-      per connecting client and injected with the shared core; the transport
-      itself carries no cross-client state.
-- [ ] HTTP listener bound to `127.0.0.1` per O4; port fallback to ephemeral.
-      Route by the `Mcp-Session-Id` header; an `initialize` without one mints a
-      session. Pipe `HTTPResponse.stream` to the client for SSE. Sweep sessions
-      past a timeout, and close on DELETE.
-- [ ] `TokenStore`: token → capability set. Provision one token with the full
-      set; thread the capability set through to the registry. AC11 / S9.
-- [ ] Bearer-token and Origin validators.
-- [ ] Publish `endpoint.json` at mode `0600`.
-- [ ] Register `pippin_status`.
-- Validation: `curl` the endpoint with correct token (succeeds), wrong token
-      (401), and a non-loopback `Origin` (rejected). AC5. Plus the two-token unit
-      test from AC11, asserting different tool lists per capability set.
+### Step 4 — Server, transport, validators  ✅ done 2026-08-23
+- [x] `ServerHost` actor: shared core (config, token store, registry) plus the
+      session table `sessionID → (Server, transport, token, capabilities)`, with a
+      timeout sweep and DELETE close.
+- [x] HTTP listener on swift-nio bound to `127.0.0.1` (O4), ephemeral-port
+      fallback on conflict, SSE piped from `HTTPResponse.stream`. Loopback is
+      re-checked at bind time, not just at config load.
+- [x] `TokenStore`: token → `TokenIdentity { label, capabilities }`. One local
+      token provisioned with all three capabilities; the capability set is
+      threaded into the registry. AC11 / S9.
+- [x] Bearer and Origin validators. Sessions are additionally bound to the token
+      that opened them, so a broad token cannot be swapped for a narrow one
+      mid-session while keeping the broad tier.
+- [x] `endpoint.json` published at mode 0600, with a `pid` and an `isStale` check
+      — a crash or `kill -9` leaves the file behind, so readers must verify rather
+      than dial a dead port.
+- [x] `pippin_status` registered and answering over the wire.
+- [x] Validation — live against the packaged bundle:
+      correct token `200`; wrong token `401`; absent token `401`;
+      `Origin: https://evil.example.com` `403`; loopback `Origin` `200`.
+      Full handshake returns `pippin_status` in `tools/list` with its annotations
+      and `outputSchema`, and `tools/call` returns the structured snapshot. AC5.
+      Plus the two-token capability test from AC11. `swift test`: 85 tests,
+      11 suites, all passing.
 
 ### Step 5 — Core safety primitives
 - [ ] `ConfirmTokenStore`: mint / validate / consume, TTL, single-use, ID-set

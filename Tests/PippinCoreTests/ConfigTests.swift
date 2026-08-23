@@ -82,9 +82,11 @@ struct ConfigTests {
 
     // MARK: Persistence
 
+    /// Contains a space deliberately — see the note in EndpointTests. The real
+    /// config lives under "Application Support".
     private func temporaryURL() -> URL {
         FileManager.default.temporaryDirectory
-            .appending(path: "pippin-tests-\(UUID().uuidString)", directoryHint: .isDirectory)
+            .appending(path: "pippin tests \(UUID().uuidString)", directoryHint: .isDirectory)
             .appending(path: "config.json")
     }
 
@@ -156,6 +158,6 @@ struct ConfigTests {
         config.http.bind = "0.0.0.0"
 
         #expect(throws: PippinError.self) { try config.save(to: url) }
-        #expect(!FileManager.default.fileExists(atPath: url.path()))
+        #expect(!FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
     }
 }
