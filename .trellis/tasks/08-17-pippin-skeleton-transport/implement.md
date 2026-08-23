@@ -40,7 +40,7 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   enough for step 2 to produce a launchable bundle. The real status UI is step 8.
   `pippin-shim` exits with a "not implemented (step 7)" message.
 
-### Step 2 — Packaging and signing
+### Step 2 — Packaging and signing  ✅ done 2026-08-23 · gate G1 passed
 - [ ] Adapt `setup_dev_signing.sh` from `apple-skills:guide-macos-spm-packaging`
       for the self-signed path only; make it idempotent and refuse to overwrite an
       existing identity. Drop the Developer ID and notarization branches — they
@@ -54,8 +54,17 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
   ls -R build/Pippin.app/Contents
   codesign -dv --verbose=4 build/Pippin.app
   ```
-- **Review gate G1:** signature identity recorded. Repackage twice more and
-  confirm the identity is unchanged (AC2 first half).
+- **Review gate G1: PASSED.** Evidence in `research/g1-signing-verification.md`;
+  the identity and its designated requirement are recorded in the repo-root
+  `notice.md`. Three `rm -rf build && package_app.sh` cycles produced an
+  identical `Authority`, `Identifier`, and designated requirement
+  (`identifier "io.github.is52hertz.pippin" and certificate root =
+  H"1ab7e0bc…775d"`), signed by `1AB7E0BC58C427092143FBADABA7F34CD607775D` every
+  time. `codesign --verify --deep --strict` passes and the bundle launches.
+  Also verified: with no identity present the packaging script exits 1 without
+  building, re-running the signing script refuses to overwrite, and no key
+  material survives under `$TMPDIR`. Caveat recorded — `spctl` proved nothing on
+  this machine, where Gatekeeper assessment is disabled.
 
 ### Step 3 — Config and core error/DTO plumbing
 - [ ] `Config` with defaults, load/save, loopback-bind validation.
