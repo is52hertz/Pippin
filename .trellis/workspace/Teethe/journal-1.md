@@ -44,3 +44,24 @@ Planned the Pippin macOS MCP server as a parent task plus three batch-one childr
 - Finish implement.md step 0: resolve swift-sdk version and confirm the API surface
 - Stop condition: if the SDK exposes no per-request session id, revise confirm-token session binding in the parent design before writing tools
 - Then step 1 (Package.swift skeleton) and step 2 (packaging + setup_dev_signing.sh, self-signed only) to reach gate G1
+
+
+## Session 2: Pippin skeleton Step 8 native GUI
+
+**Date**: 2026-08-23
+**Task**: Pippin skeleton Step 8 native GUI
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Implemented honest non-prompting permission reporting, native menu-bar and Settings UI, atomic config application, tests, signed-bundle runtime evidence, and independent Trellis review. Step 9 remains; final user visual confirmation is recorded as pending.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `11599ae` | (see git log) |
+
+### Status
+
+[OK] **Completed**
