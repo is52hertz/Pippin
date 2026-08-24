@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/prd.md", "reason": "Verify inherited security and integration gates, especially A4 and A8"}
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/design.md", "reason": "Verify loopback, credential ownership, endpoint publication, and single-resident-process invariants"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/research/shim-transport-surface.md", "reason": "Verify explicit disabled-state handling does not regress bounded endpoint and transport behavior"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/research/step8-ui-architecture.md", "reason": "Verify the real switch replaces the development-only placeholder and keeps menu/Settings parity"}

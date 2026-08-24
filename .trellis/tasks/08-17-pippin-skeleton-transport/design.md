@@ -183,13 +183,16 @@ rules get violated.
 
 ## 7. GUI
 
-`MenuBarExtra` with a `Settings` scene. Content:
+The remaining HIG redesign follows
+`research/step8-ui-architecture.md`; that decision record is authoritative for
+source layout, visual scope, and delivery sequence. The functional permission
+and config contracts below remain unchanged.
 
-- Server: running state, bound port, connected session count.
-- Permissions: one row per relevant grant with its real state and a button
-  opening the relevant System Settings pane. Reading a status must never prompt
-  for access or launch another app.
-- Modules: per-module enable toggle and write toggle.
+`MenuBarExtra` with a `Settings` scene. The menu is the compact user surface;
+Settings owns module controls, full permission explanations/actions, and
+advanced server diagnostics. Reading either surface must never prompt for access
+or launch another app. The detailed final hierarchy appears below and in
+`research/step8-ui-architecture.md`.
 
 Permission reporting is deliberately narrower than the label "TCC status" can
 suggest:
@@ -261,6 +264,39 @@ hand-drawn backgrounds or custom window chrome. macOS 26 applies Liquid Glass to
 standard controls and system surfaces automatically; Pippin does not apply a
 glass effect to content. Consult `apple-skills:hig` and
 `apple-skills:ios-liquid-glass` during implementation, not after.
+
+### Presentation source layout and dependency rules
+
+Use a lean single-target layout: `App/`, `Runtime/`, `Presentation/`,
+`MenuBar/`, `Settings/`, and `SharedUI/`. Do not add a generic `Features/`
+wrapper, empty future pane directories, or a separate UI target. Keep the
+runtime actor and its protocol/state/snapshot coherent in one file; keep one
+shared presentation model, with Settings navigation local to the scene.
+`SharedUI` is only for controls used by both menu and Settings.
+
+Runtime imports no SwiftUI. Presentation scenes import no EventKit, Carbon,
+NIO, or MCP. Permission actions continue through semantic model intents. A pure
+file migration precedes visual changes and must produce no behavior or visual
+diff.
+
+### Approved visual information architecture
+
+The menu-bar window is compact and user-facing: concise status, only actionable
+integration problems, Settings/manage-apps entry, and Quit. Address, port,
+session count, backend diagnostics, and raw write terminology leave the menu.
+Refresh happens automatically on appearance and after actions.
+
+Settings uses a standard sidebar and system controls. Real panes are created as
+content lands: General, Apps/Integrations, Privacy, Advanced, and About. General
+may show a disabled read-only **MCP Server** switch whose value mirrors the
+actual running state. It has no setter or side effect in Step 8; the separate
+`08-24-pippin-server-lifecycle-toggle` task owns persistence and runtime wiring.
+This placeholder is acceptable only while the app is development-only.
+
+The starting window should be compact (approximately 720 × 500 pt) and
+pane-responsive. Do not hand-draw cards or chrome, decorate content with glass,
+or retain a floating Refresh control. Full states, icon semantics, and AC10
+evidence are specified in the research decision record.
 
 ## 8. Risks
 

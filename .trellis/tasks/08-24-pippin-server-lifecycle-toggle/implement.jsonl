@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/prd.md", "reason": "Inherited product constraints and cross-child acceptance criteria, including intentional disablement A8"}
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/design.md", "reason": "Resident-process, endpoint, token, transport, and security architecture this lifecycle feature must preserve"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/design.md", "reason": "Current app runtime, shim, GUI ownership, and placeholder contract to extend without duplication"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/research/step8-ui-architecture.md", "reason": "Approved UI placeholder and replacement contract for the real lifecycle switch"}

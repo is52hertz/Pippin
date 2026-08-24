@@ -139,15 +139,19 @@ relitigate them.
 | `08-17-pippin-skeleton-transport` | Signed `.app`, HIG menu-bar GUI, resident HTTP transport + stdio shim, and the cross-cutting core primitives (config, mutation gate, confirm-token store, audit log, DTO conventions, error model, AppleScript runner) | 1 |
 | `08-17-pippin-reminders-crud` | Reminders module: full CRUD over EventKit, two-phase delete, iCloud-sync-correct writes | 1 |
 | `08-17-pippin-mail-read-search` | Mail module: read-only search and fetch, proving multi-backend routing and degradation | 1 |
+| `08-24-pippin-server-lifecycle-toggle` | Persistent global MCP Server switch: resident app, conservative stop/start, credential invalidation, and explicit shim disabled-state handling | 1 follow-up |
 
 **Ordering:** the skeleton child owns primitives the other two consume, so it
-lands first. Reminders and Mail are independent of each other. This ordering is
-recorded in each child's `implement.md`; parent/child linkage itself carries no
-dependency semantics.
+lands first. Its visual Step 8 may show only a disabled read-only server-switch
+placeholder. The lifecycle-toggle child wires that control before production
+use, but does not block the skeleton's existing Step 9 transport checks.
+Reminders and Mail are independent of each other. This ordering is recorded in
+each child's `implement.md`; parent/child linkage itself carries no dependency
+semantics.
 
 ## Cross-Child Acceptance Criteria
 
-These are the parent's own gates, verified at integration review after all three
+These are the parent's own gates, verified at integration review after all four
 children are checked.
 
 - [ ] **A1 — TCC identity stability.** Across three consecutive
@@ -183,6 +187,12 @@ children are checked.
 - [ ] **A7 — Honest failure.** Every backend-unavailable condition (missing
       permission, schema drift, app not running, Apple Event timeout) surfaces as
       an explicit error with an actionable hint. No silent empty results.
+- [ ] **A8 — Intentional disablement is conservative and explicit.** Turning the
+      global server switch off leaves the signed app resident but closes every
+      MCP session, removes the endpoint, and invalidates bearer and confirmation
+      tokens. The shim distinguishes this user-selected state from launch or
+      readiness failure, and re-enabling creates fresh credentials without a
+      new TCC prompt.
 
 ## Out of Scope for Batch One
 
@@ -274,7 +284,10 @@ share batch one's safety primitives. Everything needing token tiers lands
 together in batch four, so the security mechanism is never half-built.
 
 **Batch 1 — planned, task-level (this task tree):**
-skeleton/transport · Reminders CRUD · Mail read/search.
+skeleton/transport · persistent server lifecycle toggle · Reminders CRUD · Mail
+read/search. The lifecycle toggle is a post-skeleton follow-up and is required
+before production use; it does not block the skeleton's protocol integration
+gate.
 
 **Batch 2 — high value, low risk:**
 - Calendar (EventKit; shares most of the Reminders module's code — the cheapest

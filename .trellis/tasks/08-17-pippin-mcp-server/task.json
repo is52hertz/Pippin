@@ -21,7 +21,8 @@
   "children": [
     "08-17-pippin-skeleton-transport",
     "08-17-pippin-reminders-crud",
-    "08-17-pippin-mail-read-search"
+    "08-17-pippin-mail-read-search",
+    "08-24-pippin-server-lifecycle-toggle"
   ],
   "parent": null,
   "relatedFiles": [],

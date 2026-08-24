@@ -285,6 +285,36 @@ and Full Disk Access navigation. A subsequent passive status call reported all
 three effective states as `granted`. The visual redesign and AC10 remain
 separate and open.
 
+Approved visual-redesign plan (2026-08-24):
+
+- [ ] **8A — Pure source migration.** Move the existing app files into the lean
+      `App/Runtime/Presentation/MenuBar/Settings/SharedUI` structure defined in
+      `research/step8-ui-architecture.md`. Make no behavior or visual change.
+      Verify build, tests, signed packaging, unchanged identity, and no fresh TCC
+      prompt. Commit independently as
+      `refactor(app): organize app UI sources`.
+- [ ] **8B — Menu-bar redesign.** Replace the developer dashboard with the
+      compact user hierarchy, actionable-problems-only body, automatic refresh,
+      and semantic icon states. Do not implement server lifecycle. Commit
+      independently as `feat(app): redesign menu bar experience`.
+- [ ] **8C — Settings redesign.** Add the standard sidebar/pane information
+      architecture as real content warrants, move diagnostics to Advanced, use
+      user-facing integration language, and adopt compact responsive sizing.
+      A disabled read-only global server switch may mirror the actual running
+      state; it has no setter, persistence, or runtime behavior. The separate
+      lifecycle task owns that feature. Commit independently as
+      `feat(app): redesign settings experience`.
+- [ ] **8D — Close AC10.** Add semantic presentation-state tests and useful
+      previews for ready, needs-attention, setup-required, and failed. Avoid
+      pixel/layout tests and source-string tautologies. Run build/test/package/
+      diff-check, then manually review the signed app in light and dark modes,
+      VoiceOver, menu-bar interaction, Settings activation, and window resizing.
+      Finish with an independent `trellis-check`.
+
+The visual work must not add production module tools, Step 9 behavior, a new
+dependency, signing changes, or the real server switch. Step 9 may proceed on
+the existing transport contract independently of the planned lifecycle child.
+
 ### Step 9 — Integration and full-scope check
 - [ ] Connect Claude Code over HTTP and over the shim; confirm identical tool
       lists. AC3. External prerequisite: restore Claude Code organization access

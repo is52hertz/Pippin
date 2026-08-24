@@ -320,7 +320,8 @@ Sources/
                     SQLite reader, backend routing
   PippinModules/    per-app modules (Reminders, Mail, …)
   PippinServer/     MCP server wiring, transport, validators, tool registry
-  PippinApp/        SwiftUI MenuBarExtra + Settings; hosts the server (→ .app)
+  PippinApp/        SwiftUI app lifecycle, resident runtime, presentation model,
+                    MenuBarExtra, Settings, and shared UI (→ .app)
   pippin-shim/      stdio ⇄ HTTP bridge executable
 Tests/
 ```

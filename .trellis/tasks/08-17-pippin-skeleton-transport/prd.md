@@ -38,11 +38,16 @@ written against them.
 - **S5 — Tool registry with gating.** Modules and their write capability are
   enabled per config. Disabled means absent from `tools/list`. Config changes
   re-derive the registry and emit `notifications/tools/list_changed`.
-- **S6 — Menu bar GUI and Settings, HIG-compliant.** `MenuBarExtra` showing
-  server status, bound port, enabled modules, and TCC permission states.
-  `Settings` scene toggling modules and their write capability. Standard controls
-  and system materials only; no custom-drawn chrome. Built against the macOS 26
-  SDK so the system Liquid Glass appearance applies.
+- **S6 — Menu bar GUI and Settings, HIG-compliant.** A compact, user-facing
+  `MenuBarExtra` shows concise service health and only permission/integration
+  problems that need action; development diagnostics such as bound port and
+  session count belong in Settings. The `Settings` scene manages modules and
+  their write capability, permissions, diagnostics, and app information using
+  standard controls and system materials only, with no custom-drawn chrome.
+  Built against the macOS 26 SDK so the system Liquid Glass appearance applies.
+  While the app remains development-only, both surfaces may show a disabled,
+  read-only global server-switch placeholder; the separate lifecycle child owns
+  its behavior before production use.
 - **S7 — Cross-cutting core primitives.** Owned here because all modules consume
   them and duplicating them across module tasks would fragment the safety model:
   config loading, DTO conventions and null-pruning, the error model, the mutation
