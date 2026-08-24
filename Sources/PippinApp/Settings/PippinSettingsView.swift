@@ -60,6 +60,16 @@ struct PippinSettingsView: View {
     }
 }
 
+private struct ServerStatusRows: View {
+    let model: PippinPresentationModel
+
+    var body: some View {
+        LabeledContent("State", value: model.state.displayName)
+        LabeledContent("Address", value: model.port == 0 ? "—" : "\(model.host):\(model.port)")
+        LabeledContent("Sessions", value: model.sessionCount.formatted())
+    }
+}
+
 private struct PermissionSettingsRow: View {
     let title: String
     let detail: String

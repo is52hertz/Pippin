@@ -293,7 +293,7 @@ Approved visual-redesign plan (2026-08-24):
       Verify build, tests, signed packaging, unchanged identity, and no fresh TCC
       prompt. Commit independently as
       `refactor(app): organize app UI sources`.
-- [ ] **8B — Menu-bar redesign.** Replace the developer dashboard with the
+- [x] **8B — Menu-bar redesign.** Replace the developer dashboard with the
       compact user hierarchy, actionable-problems-only body, automatic refresh,
       and semantic icon states. Do not implement server lifecycle. Commit
       independently as `feat(app): redesign menu bar experience`.

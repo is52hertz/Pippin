@@ -27,6 +27,35 @@ final class PippinPresentationModel {
         self.runtime = runtime
     }
 
+    var menuBarPresentation: MenuBarPresentation {
+        let attentionItems = state == .running ? menuBarAttentionItems : []
+        let semanticState: MenuBarPresentation.State
+
+        switch state {
+        case .starting:
+            semanticState = .starting
+        case .running:
+            if usableEnabledIntegrationCount == 0 {
+                semanticState = .setupRequired
+            } else if attentionItems.isEmpty {
+                semanticState = .ready
+            } else {
+                semanticState = .needsAttention
+            }
+        case .stopped:
+            semanticState = .setupRequired
+        case .failed:
+            semanticState = .failed
+        }
+
+        return MenuBarPresentation(
+            state: semanticState,
+            statusText: menuBarStatusText(for: semanticState),
+            detail: menuBarDetail(for: semanticState),
+            attentionItems: attentionItems
+        )
+    }
+
     func start() async {
         do {
             apply(try await runtime.start())
@@ -147,6 +176,120 @@ final class PippinPresentationModel {
         }
         if snapshot.state == .failed, let detail = snapshot.detail {
             errorMessage = detail
+        }
+    }
+
+    private var menuBarAttentionItems: [MenuBarPresentation.AttentionItem] {
+        var items: [MenuBarPresentation.AttentionItem] = []
+
+        if config.modules["reminders"]?.enabled == true,
+           permissions.reminders != .granted,
+           let action = permissionAction(for: .reminders) {
+            items.append(
+                MenuBarPresentation.AttentionItem(
+                    id: .reminders,
+                    title: "Reminders",
+                    detail: remindersAttentionDetail,
+                    symbolName: "checklist",
+                    action: action
+                )
+            )
+        }
+
+        if config.modules["mail"]?.enabled == true {
+            if permissions.mailAutomation != .granted,
+               let action = permissionAction(for: .mailAutomation) {
+                items.append(
+                    MenuBarPresentation.AttentionItem(
+                        id: .mailAutomation,
+                        title: "Mail Automation",
+                        detail: mailAutomationAttentionDetail,
+                        symbolName: "mail",
+                        action: action
+                    )
+                )
+            }
+
+            if permissions.fullDiskAccess != .granted,
+               let action = permissionAction(for: .mailData) {
+                items.append(
+                    MenuBarPresentation.AttentionItem(
+                        id: .mailData,
+                        title: "Mail Data",
+                        detail: "Add Pippin to Full Disk Access in System Settings.",
+                        symbolName: "internaldrive",
+                        action: action
+                    )
+                )
+            }
+        }
+
+        return items
+    }
+
+    private var usableEnabledIntegrationCount: Int {
+        var count = 0
+
+        if let reminders = config.modules["reminders"], reminders.enabled,
+           permissions.reminders == .granted
+            || (permissions.reminders == .writeOnly && reminders.writes) {
+            count += 1
+        }
+
+        if config.modules["mail"]?.enabled == true,
+           permissions.mailAutomation == .granted || permissions.fullDiskAccess == .granted {
+            count += 1
+        }
+
+        return count
+    }
+
+    private var remindersAttentionDetail: String {
+        switch permissions.reminders {
+        case .notDetermined:
+            "Allow access before Pippin can use Reminders."
+        case .denied, .restricted, .writeOnly:
+            "Allow full Reminders access in System Settings."
+        case .granted, .unavailable, .unknown:
+            "Reminders access needs attention."
+        }
+    }
+
+    private var mailAutomationAttentionDetail: String {
+        switch permissions.mailAutomation {
+        case .unavailable:
+            "Open Mail to check Automation access."
+        case .notDetermined:
+            "Allow Pippin to control Mail."
+        case .denied, .restricted:
+            "Allow Pippin under Automation in System Settings."
+        case .writeOnly, .granted, .unknown:
+            "Mail Automation needs attention."
+        }
+    }
+
+    private func menuBarStatusText(for state: MenuBarPresentation.State) -> String {
+        switch state {
+        case .starting: "Starting"
+        case .ready: "Ready"
+        case .needsAttention: "Needs attention"
+        case .setupRequired: self.state == .stopped ? "Stopped" : "Setup required"
+        case .failed: "Failed"
+        }
+    }
+
+    private func menuBarDetail(for state: MenuBarPresentation.State) -> String? {
+        if let errorMessage { return errorMessage }
+
+        return switch state {
+        case .setupRequired where self.state == .running:
+            "Enable an integration and finish its access setup."
+        case .setupRequired:
+            "Pippin is not accepting MCP connections."
+        case .failed:
+            "Pippin could not start."
+        case .starting, .ready, .needsAttention:
+            nil
         }
     }
 

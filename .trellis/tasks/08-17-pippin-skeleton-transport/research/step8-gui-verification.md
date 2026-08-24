@@ -190,3 +190,32 @@ Verification:
   `1AB7E0BC58C427092143FBADABA7F34CD607775D` (`Pippin Local Signing`).
 - `git diff --check`: passed.
 - Independent `trellis-check`: no findings and no self-fixes.
+
+## Step 8B menu-bar redesign — 2026-08-24
+
+The `.window` MenuBarExtra is now a 312pt-wide, content-height user surface. It
+shows a concise service header, the approved disabled read-only MCP Server
+placeholder, actionable permission problems for enabled integrations only, and
+Settings/Quit. Port, address, session count, module diagnostics, and the manual
+Refresh button were removed from the menu; passive refresh still runs when the
+surface appears and after permission actions.
+
+One presentation derivation now owns the five menu semantics: starting, ready,
+needs attention, setup required/stopped, and failed. Each uses a distinct SF
+Symbol and VoiceOver label rather than color alone. Non-running states suppress
+stale permission actions. Tests also prove that disabled integrations do not
+contribute attention rows and that partial Mail access remains usable while its
+missing backend is called out.
+
+Verification:
+
+- `swift build`: passed.
+- `swift test`: **200 tests in 25 suites**, passed after the independent review
+  added starting/stopped and accessibility-label assertions.
+- `Scripts/package_app.sh`: passed.
+- `codesign --verify --deep --strict`: passed with the unchanged
+  `1AB7E0BC58C427092143FBADABA7F34CD607775D` identity.
+- `git diff --check`: passed.
+- Independent `trellis-check`: no open findings; one test-only coverage self-fix.
+
+Settings visuals and final preview/manual AC10 evidence remain in Steps 8C/8D.

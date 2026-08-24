@@ -1,118 +1,127 @@
 import AppKit
-import PippinCore
-import PippinServer
 import SwiftUI
 
 struct PippinMenuView: View {
     let model: PippinPresentationModel
 
     var body: some View {
-        Form {
-            ServerStatusSection(model: model)
+        let presentation = model.menuBarPresentation
 
-            Section("Permissions") {
-                PermissionStatusRow(
-                    title: "Reminders",
-                    state: model.permissions.reminders,
-                    permission: .reminders,
-                    model: model
-                )
-                PermissionStatusRow(
-                    title: "Mail Automation",
-                    state: model.permissions.mailAutomation,
-                    permission: .mailAutomation,
-                    model: model
-                )
-                PermissionStatusRow(
-                    title: "Mail Data",
-                    state: model.permissions.fullDiskAccess,
-                    permission: .mailData,
+        VStack(alignment: .leading, spacing: 0) {
+            PippinMenuHeader(
+                presentation: presentation,
+                isServerRunning: model.state == .running
+            )
+
+            if presentation.attentionItems.isEmpty == false {
+                Divider()
+                PippinNeedsAttentionSection(
+                    items: presentation.attentionItems,
                     model: model
                 )
             }
 
-            Section("Modules") {
-                ForEach(model.config.modules.keys.sorted(), id: \.self) { module in
-                    LabeledContent(Self.title(for: module)) {
-                        Text(Self.moduleStatus(model.config.modules[module]))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            if let error = model.errorMessage {
-                Section("Error") {
-                    Text(error)
-                        .foregroundStyle(.red)
-                        .textSelection(.enabled)
-                }
-            }
-
-            Section {
-                HStack {
-                    PippinSettingsButton()
-                    Button("Refresh", systemImage: "arrow.clockwise") {
-                        Task { await model.refresh() }
-                    }
-                    Spacer()
-                    Button("Quit Pippin") {
-                        NSApplication.shared.terminate(nil)
-                    }
-                    .keyboardShortcut("q")
-                }
-            }
+            Divider()
+            PippinMenuFooter()
         }
-        .formStyle(.grouped)
-        .frame(width: 390, height: 440)
+        .frame(width: 312)
         .task { await model.refresh() }
     }
 
     static func title(for module: String) -> String {
-        module.replacingOccurrences(of: "_", with: " ").capitalized
-    }
-
-    static func moduleStatus(_ module: Config.ModuleConfig?) -> String {
-        guard let module, module.enabled else { return "Disabled" }
-        return module.writes ? "Enabled · Writes on" : "Enabled · Read only"
+        module.replacing("_", with: " ").capitalized
     }
 }
 
-private struct ServerStatusSection: View {
-    let model: PippinPresentationModel
+private struct PippinMenuHeader: View {
+    let presentation: MenuBarPresentation
+    let isServerRunning: Bool
 
     var body: some View {
-        Section("Server") {
-            ServerStatusRows(model: model)
-        }
-    }
-}
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pippin")
+                        .font(.headline)
+                    Label(presentation.statusText, systemImage: presentation.symbolName)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
 
-struct ServerStatusRows: View {
-    let model: PippinPresentationModel
+                Spacer()
 
-    var body: some View {
-        LabeledContent("State", value: model.state.displayName)
-        LabeledContent("Address", value: model.port == 0 ? "—" : "\(model.host):\(model.port)")
-        LabeledContent("Sessions", value: model.sessionCount.formatted())
-    }
-}
+                Toggle("MCP Server", isOn: .constant(isServerRunning))
+                    .toggleStyle(.switch)
+                    .disabled(true)
+                    .fixedSize()
+            }
 
-private struct PermissionStatusRow: View {
-    let title: String
-    let state: PermissionState
-    let permission: PresentedPermission
-    let model: PippinPresentationModel
-
-    var body: some View {
-        LabeledContent(title) {
-            HStack {
-                Text(state.displayName)
+            if let detail = presentation.detail {
+                Label(detail, systemImage: "exclamationmark.circle")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                PermissionActionControl(
-                    model: model,
-                    presentation: model.permissionAction(for: permission)
-                )
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
             }
         }
+        .padding(14)
+    }
+}
+
+private struct PippinNeedsAttentionSection: View {
+    let items: [MenuBarPresentation.AttentionItem]
+    let model: PippinPresentationModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Needs Attention")
+                .font(.headline)
+
+            ForEach(items) { item in
+                PippinAttentionRow(item: item, model: model)
+            }
+        }
+        .padding(14)
+    }
+}
+
+private struct PippinAttentionRow: View {
+    let item: MenuBarPresentation.AttentionItem
+    let model: PippinPresentationModel
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: item.symbolName)
+                .frame(width: 16)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(item.title)
+                Text(item.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                PermissionActionControl(model: model, presentation: item.action)
+                    .controlSize(.small)
+            }
+        }
+    }
+}
+
+private struct PippinMenuFooter: View {
+    var body: some View {
+        HStack {
+            PippinSettingsButton()
+            Spacer()
+            Button("Quit", action: quit)
+                .keyboardShortcut("q")
+        }
+        .padding(10)
+    }
+
+    private func quit() {
+        NSApplication.shared.terminate(nil)
     }
 }

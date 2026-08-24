@@ -159,6 +159,139 @@ struct PippinPresentationModelTests {
         #expect(await runtime.updates.count == 1)
     }
 
+    @Test("menu presentation is ready when an enabled integration is usable")
+    func menuPresentationReady() async {
+        let model = await model(
+            permissions: .init(
+                reminders: .granted,
+                mailAutomation: .granted,
+                fullDiskAccess: .granted
+            )
+        )
+
+        #expect(model.menuBarPresentation.state == .ready)
+        #expect(model.menuBarPresentation.statusText == "Ready")
+        #expect(model.menuBarPresentation.symbolName == "apple.logo")
+        #expect(model.menuBarPresentation.attentionItems.isEmpty)
+        #expect(model.menuBarPresentation.accessibilityLabel == "Pippin, Ready")
+    }
+
+    @Test("menu presentation shows only actionable problems for enabled integrations")
+    func menuPresentationNeedsAttention() async {
+        var config = Config()
+        config.modules["mail"]?.enabled = false
+        let setupRequired = await model(
+            config: config,
+            permissions: .init(
+                reminders: .notDetermined,
+                mailAutomation: .denied,
+                fullDiskAccess: .denied
+            )
+        )
+
+        #expect(setupRequired.menuBarPresentation.state == .setupRequired)
+        #expect(setupRequired.menuBarPresentation.attentionItems.map(\.id) == [.reminders])
+
+        config.modules["mail"]?.enabled = true
+        let partiallyUsable = await model(
+            config: config,
+            permissions: .init(
+                reminders: .notDetermined,
+                mailAutomation: .granted,
+                fullDiskAccess: .denied
+            )
+        )
+
+        #expect(partiallyUsable.menuBarPresentation.state == .needsAttention)
+        #expect(partiallyUsable.menuBarPresentation.symbolName == "exclamationmark.triangle")
+        #expect(
+            partiallyUsable.menuBarPresentation.accessibilityLabel
+                == "Pippin, Needs attention"
+        )
+        #expect(
+            partiallyUsable.menuBarPresentation.attentionItems.map(\.id)
+                == [.reminders, .mailData]
+        )
+    }
+
+    @Test("menu presentation requires setup when no enabled integration is usable")
+    func menuPresentationSetupRequired() async {
+        var config = Config()
+        config.modules["reminders"]?.enabled = false
+        config.modules["mail"]?.enabled = false
+        let model = await model(
+            config: config,
+            permissions: .init(
+                reminders: .granted,
+                mailAutomation: .granted,
+                fullDiskAccess: .granted
+            )
+        )
+
+        #expect(model.menuBarPresentation.state == .setupRequired)
+        #expect(model.menuBarPresentation.statusText == "Setup required")
+        #expect(model.menuBarPresentation.symbolName == "bolt.slash")
+        #expect(model.menuBarPresentation.attentionItems.isEmpty)
+    }
+
+    @Test("non-running menu presentations use lifecycle semantics and hide permission actions")
+    func nonRunningMenuPresentations() async {
+        let startingRuntime = TestRuntime(
+            value: AppRuntimeSnapshot(
+                state: .starting,
+                detail: nil,
+                server: snapshot(
+                    permissions: .init(
+                        reminders: .notDetermined,
+                        mailAutomation: .denied,
+                        fullDiskAccess: .denied
+                    )
+                ).server
+            )
+        )
+        let startingModel = PippinPresentationModel(runtime: startingRuntime)
+        await startingModel.refresh()
+
+        #expect(startingModel.menuBarPresentation.state == .starting)
+        #expect(startingModel.menuBarPresentation.statusText == "Starting")
+        #expect(startingModel.menuBarPresentation.symbolName == "clock")
+        #expect(startingModel.menuBarPresentation.accessibilityLabel == "Pippin, Starting")
+        #expect(startingModel.menuBarPresentation.attentionItems.isEmpty)
+
+        let stoppedModel = PippinPresentationModel(
+            runtime: TestRuntime(
+                value: AppRuntimeSnapshot(state: .stopped, detail: nil, server: nil)
+            )
+        )
+        await stoppedModel.refresh()
+
+        #expect(stoppedModel.menuBarPresentation.state == .setupRequired)
+        #expect(stoppedModel.menuBarPresentation.statusText == "Stopped")
+        #expect(stoppedModel.menuBarPresentation.symbolName == "bolt.slash")
+        #expect(stoppedModel.menuBarPresentation.accessibilityLabel == "Pippin, Stopped")
+        #expect(stoppedModel.menuBarPresentation.attentionItems.isEmpty)
+    }
+
+    @Test("failed menu presentation hides stale permission actions")
+    func failedMenuPresentationHidesPermissionActions() async {
+        let runtime = TestRuntime(
+            value: AppRuntimeSnapshot(
+                state: .failed,
+                detail: "The listener could not start.",
+                server: nil
+            )
+        )
+        let model = PippinPresentationModel(runtime: runtime)
+        await model.refresh()
+
+        #expect(model.menuBarPresentation.state == .failed)
+        #expect(model.menuBarPresentation.statusText == "Failed")
+        #expect(model.menuBarPresentation.symbolName == "xmark.octagon")
+        #expect(model.menuBarPresentation.accessibilityLabel == "Pippin, Failed")
+        #expect(model.menuBarPresentation.detail == "The listener could not start.")
+        #expect(model.menuBarPresentation.attentionItems.isEmpty)
+    }
+
     @Test("permission states route to explicit user actions")
     func permissionActionRouting() async {
         let remindersUndetermined = await model(
@@ -389,6 +522,7 @@ struct PippinPresentationModelTests {
     }
 
     private func snapshot(
+        config: Config = Config(),
         permissions: PermissionSnapshot? = nil
     ) -> AppRuntimeSnapshot {
         AppRuntimeSnapshot(
@@ -398,17 +532,18 @@ struct PippinPresentationModelTests {
                 host: "127.0.0.1",
                 port: 8_080,
                 sessionCount: 3,
-                config: Config(),
+                config: config,
                 permissions: permissions ?? self.permissions()
             )
         )
     }
 
     private func model(
+        config: Config = Config(),
         permissions: PermissionSnapshot
     ) async -> PippinPresentationModel {
         let model = PippinPresentationModel(
-            runtime: TestRuntime(value: snapshot(permissions: permissions))
+            runtime: TestRuntime(value: snapshot(config: config, permissions: permissions))
         )
         await model.refresh()
         return model
