@@ -134,7 +134,9 @@ Close AC10 only after:
 - presentation tests cover semantic state derivation, not pixel layout or
   source-string tautologies;
 - `swift build`, `swift test`, signed packaging, and `git diff --check` pass;
-- the signed app is manually reviewed in light/dark appearance, VoiceOver,
-  menu-bar interaction, Settings/Command-comma activation, and compact window
-  resizing;
+- the signed app is manually reviewed in light/dark appearance, menu-bar
+  interaction, Settings/Command-comma activation, and compact window resizing;
+- VoiceOver manual testing is explicitly deferred by the user and remains
+  untested; semantic labels and automated presentation tests must not be
+  presented as a substitute for that future pass;
 - an independent `trellis-check` passes.

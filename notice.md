@@ -123,10 +123,12 @@ the system frameworks.
 - Use native SwiftUI controls and system surfaces. macOS 26 supplies Liquid
   Glass automatically; do not add custom chrome, hand-drawn backgrounds, or a
   manual glass effect to content.
-- For this `LSUIElement` app, both the menu Settings item and Command-comma use
-  one `OpenSettingsAction` control. Call macOS 14+ `NSApp.activate()` before the
-  action so an existing Settings window is raised; do not use deprecated
-  `activate(ignoringOtherApps:)` or search for the window by title.
+- For this `LSUIElement` app, Settings is one fixed-ID ordinary SwiftUI `Window`,
+  with default launch suppressed and content-minimum resizability. Both the menu
+  Settings item and Command-comma use one `OpenWindowAction` control. Call modern
+  `NSApp.activate()` before opening the fixed ID so the existing window is
+  raised; do not use deprecated `activate(ignoringOtherApps:)` or search for the
+  window by title.
 
 ## Secrets
 

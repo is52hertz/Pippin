@@ -121,3 +121,35 @@ private struct PippinMenuFooter: View {
         NSApplication.shared.terminate(nil)
     }
 }
+
+#if DEBUG
+private struct PippinMenuPreview: View {
+    @State private var model: PippinPresentationModel
+
+    init(_ fixture: PreviewRuntime.Fixture) {
+        _model = State(
+            initialValue: PippinPresentationModel(runtime: PreviewRuntime(fixture))
+        )
+    }
+
+    var body: some View {
+        PippinMenuView(model: model)
+    }
+}
+
+#Preview("Ready") {
+    PippinMenuPreview(.ready)
+}
+
+#Preview("Needs Attention") {
+    PippinMenuPreview(.needsAttention)
+}
+
+#Preview("Setup Required") {
+    PippinMenuPreview(.setupRequired)
+}
+
+#Preview("Failed") {
+    PippinMenuPreview(.failed)
+}
+#endif

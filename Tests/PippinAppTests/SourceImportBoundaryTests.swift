@@ -59,11 +59,11 @@ struct SourceImportBoundaryTests {
         }
     }
 
-    @Test("presentation surfaces do not import backend frameworks")
-    func presentationSurfacesStayIndependentOfBackendFrameworks() throws {
+    @Test("app shell and presentation surfaces do not import backend frameworks")
+    func appShellAndPresentationSurfacesStayIndependentOfBackendFrameworks() throws {
         let forbidden: Set<String> = ["EventKit", "Carbon", "MCP"]
 
-        for directory in ["MenuBar", "Settings", "SharedUI"] {
+        for directory in ["App", "Presentation", "MenuBar", "Settings", "SharedUI", "PreviewSupport"] {
             for (file, line, module) in try Self.importedModules(in: directory) {
                 #expect(
                     !forbidden.contains(module) && !module.hasPrefix("NIO"),

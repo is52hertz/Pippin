@@ -2,7 +2,7 @@ import Observation
 import PippinCore
 import PippinServer
 
-/// One presentation mirror shared by the menu-bar and Settings scenes.
+/// One presentation mirror shared by the menu-bar and Settings window.
 /// The resident actors remain authoritative for server and permission state.
 @MainActor
 @Observable

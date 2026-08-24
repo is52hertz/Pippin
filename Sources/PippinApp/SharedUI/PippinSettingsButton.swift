@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct PippinSettingsButton: View {
-    @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Button("Settings…", action: open)
@@ -10,6 +10,6 @@ struct PippinSettingsButton: View {
 
     private func open() {
         NSApp.activate()
-        openSettings()
+        openWindow(id: PippinWindow.settingsID)
     }
 }

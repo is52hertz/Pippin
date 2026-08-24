@@ -198,14 +198,14 @@ Ordering: this child lands before `08-17-pippin-reminders-crud` and
       state mapping and deterministic structured output in tests.
 - [x] Replace the placeholder menu with a standard-control `MenuBarExtra` showing
       server state, bound port, session count, permission rows, and modules.
-- [x] Add a native `Settings` scene with module enable/write toggles. Persist a
+- [x] Add a dedicated Settings window with module enable/write toggles. Persist a
       validated config before applying it to the resident host; surface failures
       without advancing the UI mirror. Verify a visible-tool change emits
       `notifications/tools/list_changed` through the existing server path.
 - [x] Add buttons opening the relevant Privacy & Security panes. Label the
       target-specific Apple Events row "Mail Automation" and the effective FDA
       probe "Mail Data" so the UI does not overstate what macOS exposes.
-- [ ] Add focused tests for permission mapping, status serialization, config
+- [x] Add focused tests for permission mapping, status serialization, config
       update success/failure, and UI-model state transitions. Package the signed
       app and manually verify menu-bar-only (`LSUIElement`) behaviour, Settings /
       Command-comma, standard controls/materials, light/dark appearance, and that
@@ -242,12 +242,12 @@ entry. Mail Data was not changed in this run and still reflects the grant made i
 the previous run. This pre-fix result kept Step 8 open until Settings activation
 and permission onboarding were implemented and rerun below.
 
-Approved functional clarification (2026-08-23; no PRD conflict):
+Approved functional clarification (2026-08-23; Settings shell updated 2026-08-25):
 
 - Replace both native Settings entry points with one semantic
-  `OpenSettingsAction` control, replace `.appSettings` for Command-comma, and
-  call macOS 14+ `NSApp.activate()` before opening/raising the existing Settings
-  scene. Do not use window-title discovery or deprecated activation APIs.
+  `OpenWindowAction` control, replace `.appSettings` for Command-comma, and call
+  modern `NSApp.activate()` before opening/raising the fixed-ID ordinary Settings
+  window. Do not use window-title discovery or deprecated activation APIs.
 - Keep `PermissionProviding`, every `ServerHost` snapshot, `pippin_status`, UI
   appearance refresh, and explicit Refresh strictly read-only and nonprompting.
 - Add a separate user-action interface implemented by
@@ -304,12 +304,43 @@ Approved visual-redesign plan (2026-08-24):
       state; it has no setter, persistence, or runtime behavior. The separate
       lifecycle task owns that feature. Commit independently as
       `feat(app): redesign settings experience`.
-- [ ] **8D — Close AC10.** Add semantic presentation-state tests and useful
+- [x] **8D — Close AC10.** Add semantic presentation-state tests and useful
       previews for ready, needs-attention, setup-required, and failed. Avoid
       pixel/layout tests and source-string tautologies. Run build/test/package/
       diff-check, then manually review the signed app in light and dark modes,
-      VoiceOver, menu-bar interaction, Settings activation, and window resizing.
-      Finish with an independent `trellis-check`.
+      menu-bar interaction, Settings activation, and window resizing. VoiceOver
+      manual testing was explicitly deferred by the user and is not claimed as
+      completed evidence. Finish with an independent `trellis-check`.
+
+Approved Settings shell correction (2026-08-25; Relay approach):
+
+- Replace SwiftUI's `Settings` scene with one ordinary `Window` under a fixed ID.
+  Suppress default launch and use content-minimum resizability so `LSUIElement`
+  startup remains menu-bar-only while the compact window can resize normally.
+- Route both `Settings…` and Command-comma through the shared
+  `PippinSettingsButton` using `OpenWindowAction`. Activate with modern
+  `NSApp.activate()` before opening the fixed ID so an existing instance is
+  activated and raised; never discover it by title or use deprecated activation.
+- Keep the root `NavigationSplitView` sidebar visible by default and bind its
+  visibility to local view state so the standard sidebar toggle remains
+  functional. Use Relay's minimal zero-size toolbar-item technique to request
+  SwiftUI's standard unified toolbar/titlebar. Add no custom chrome.
+- Preserve the disabled read-only MCP Server placeholder and every existing
+  permission, module, server, menu, signing, dependency, and preview behavior.
+  Automated coverage remains limited to valid source/import boundaries and pure
+  presentation contracts; no pixel or source-string tests.
+
+Final Step 8D result (2026-08-25): deterministic DEBUG-only previews cover
+ready, needs-attention, setup-required, and failed menu states plus Settings;
+Release contains none of their fixtures or symbols. The signed app remained
+menu-bar-only at launch. User testing passed both Settings entry points, raising
+the existing window, close/reopen, minimize/restore, standard traffic lights,
+light and dark appearance, resizing, and the system sidebar control in both
+directions. The ordinary fixed-ID Settings window uses only system controls and
+materials. VoiceOver manual testing is explicitly deferred by the user rather
+than reported as passed. Automated build/test/release/package/signature checks
+passed. The final independent Trellis review found no implementation defects and
+made only evidence-record consistency fixes, closing AC10 and Step 8.
 
 The visual work must not add production module tools, Step 9 behavior, a new
 dependency, signing changes, or the real server switch. Step 9 may proceed on

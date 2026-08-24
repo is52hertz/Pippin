@@ -41,9 +41,9 @@ written against them.
 - **S6 — Menu bar GUI and Settings, HIG-compliant.** A compact, user-facing
   `MenuBarExtra` shows concise service health and only permission/integration
   problems that need action; development diagnostics such as bound port and
-  session count belong in Settings. The `Settings` scene manages modules and
-  their write capability, permissions, diagnostics, and app information using
-  standard controls and system materials only, with no custom-drawn chrome.
+  session count belong in Settings. A dedicated Settings window manages modules
+  and their write capability, permissions, diagnostics, and app information
+  using standard controls and system materials only, with no custom-drawn chrome.
   Built against the macOS 26 SDK so the system Liquid Glass appearance applies.
   While the app remains development-only, both surfaces may show a disabled,
   read-only global server-switch placeholder; the separate lifecycle child owns
@@ -103,7 +103,7 @@ written against them.
 - [ ] **AC9** Unit tests cover confirm-token lifecycle (TTL, single-use, ID-set
       binding, session binding), registry gating, loopback-bind validation,
       AppleScript argument escaping, and the `tools/list` byte budget.
-- [ ] **AC10** GUI reviewed against HIG: standard controls, system materials, no
+- [x] **AC10** GUI reviewed against HIG: standard controls, system materials, no
       custom chrome, correct menu bar behaviour for an `LSUIElement` app.
 - [ ] **AC11** Token validation is tier-ready: a token resolves to a capability
       set rather than to a boolean, and adding a second token with a read-only

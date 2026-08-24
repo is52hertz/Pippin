@@ -22,9 +22,11 @@ struct PippinApp: App {
             }
         }
 
-        Settings {
+        Window("Pippin Settings", id: PippinWindow.settingsID) {
             PippinSettingsView(model: delegate.model)
         }
         .defaultSize(width: 720, height: 500)
+        .defaultLaunchBehavior(.suppressed)
+        .windowResizability(.contentMinSize)
     }
 }

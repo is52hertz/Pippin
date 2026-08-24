@@ -246,4 +246,43 @@ Verification:
 - Independent `trellis-check`: no findings and no self-fixes.
 
 Step 8D still owns deterministic previews and the final signed-app visual,
-VoiceOver, appearance, and resize evidence required to close AC10.
+appearance, and resize evidence required to close AC10. VoiceOver was still
+planned at this point, but the user later explicitly deferred it; the final
+record below keeps that manual check marked untested.
+
+## Step 8D final HIG review — 2026-08-25
+
+Deterministic DEBUG-only previews now cover ready, needs-attention,
+setup-required, and failed menu states plus the Settings hierarchy. A Release
+build contains none of the preview runtime, wrapper types, or fixture strings.
+
+The Settings shell moved from SwiftUI's `Settings` scene to one fixed-ID ordinary
+`Window`, with default launch suppressed and content-minimum resizability. Both
+the menu item and Command-comma use the same `OpenWindowAction`. The standard
+`NavigationSplitView` sidebar is visible by default and its system toolbar
+control changes window-local column visibility in both directions. A zero-size
+system toolbar item requests the unified titlebar; there is no custom chrome.
+
+The signed-app manual review passed:
+
+| Check | Result |
+|---|---|
+| Menu-bar-only launch | Settings did not open at launch. |
+| Settings entry and identity | Menu Settings and Command-comma raise the same existing window; no duplicate window. |
+| Window lifecycle | Close/reopen and minimize/restore from the menu-bar entry both work. |
+| Standard window chrome | All three traffic-light controls use standard enabled system behavior. |
+| Sidebar | The system toolbar button hides and restores the sidebar. |
+| Layout and appearance | Resizing and both light and dark appearance passed user review; controls and materials are native. |
+| Passive behavior | Opening and refreshing the UI caused no unsolicited TCC prompt or Mail launch. |
+
+VoiceOver manual testing was explicitly deferred by the user and is not claimed
+as completed evidence. Existing semantic labels and presentation tests remain in
+place, but this record does not substitute them for a future VoiceOver pass.
+
+Final verification passed: `swift build`, `swift test` (201 tests in 26 suites),
+`swift build -c release`, `swift package dump-package`, `Scripts/package_app.sh`,
+strict codesign verification, release preview-symbol exclusion, and
+`git diff --check`. The signing identity remained
+`1AB7E0BC58C427092143FBADABA7F34CD607775D` (`Pippin Local Signing`). The
+final independent Trellis review found no implementation defects and made only
+evidence-record consistency fixes. AC10 and Step 8 are closed.

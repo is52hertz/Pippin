@@ -188,10 +188,12 @@ The remaining HIG redesign follows
 source layout, visual scope, and delivery sequence. The functional permission
 and config contracts below remain unchanged.
 
-`MenuBarExtra` with a `Settings` scene. The menu is the compact user surface;
-Settings owns module controls, full permission explanations/actions, and
-advanced server diagnostics. Reading either surface must never prompt for access
-or launch another app. The detailed final hierarchy appears below and in
+`MenuBarExtra` with a dedicated, fixed-ID ordinary `Window` for Settings. The
+menu is the compact user surface; Settings owns module controls, full permission
+explanations/actions, and advanced server diagnostics. The window suppresses
+default launch and resizes down to its content minimum, preserving menu-bar-only
+startup. Reading either surface must never prompt for access or launch another
+app. The detailed final hierarchy appears below and in
 `research/step8-ui-architecture.md`.
 
 Permission reporting is deliberately narrower than the label "TCC status" can
@@ -222,9 +224,9 @@ advance. That update re-derives each session's visible registry and emits
 are shown to the user and leave the previous config active.
 
 `PippinApp` owns one `@MainActor @Observable` model shared by the menu-bar and
-Settings scenes. The resident runtime remains the owner of server state; the UI
-model is only a presentation mirror. Permission and runtime refreshes are
-explicit/on-appearance rather than a tight polling loop.
+dedicated Settings window. The resident runtime remains the owner of server
+state; the UI model is only a presentation mirror. Permission and runtime
+refreshes are explicit/on-appearance rather than a tight polling loop.
 
 ### User-initiated permission actions and Settings activation
 
@@ -253,13 +255,16 @@ action still refreshes the read-only snapshot before presenting an actionable
 error, so the UI never infers or claims a grant from the request result.
 
 For this `LSUIElement` app, the menu Settings item and Command-comma share one
-semantic control backed by SwiftUI's `OpenSettingsAction`. The app replaces the
-`.appSettings` command group, calls the macOS 14+ `NSApp.activate()`, then
-opens/raises SwiftUI's existing Settings scene. It does not search for a window by title
-and does not use deprecated `activate(ignoringOtherApps:)`.
+semantic control backed by SwiftUI's `OpenWindowAction`. The app replaces the
+`.appSettings` command group, declares one ordinary `Window` with a fixed
+Settings ID, suppresses its default launch, and uses content-minimum
+resizability. The control calls the modern `NSApp.activate()` before opening the
+fixed ID, so SwiftUI activates or raises the same single window. It does not
+search for a window by title and does not use deprecated
+`activate(ignoringOtherApps:)`.
 
 HIG compliance is a deliverable, not a polish pass: standard SwiftUI controls,
-`Form`, `Section`, `Toggle`, `Button`, `OpenSettingsAction`, system materials, no
+`Form`, `Section`, `Toggle`, `Button`, `OpenWindowAction`, system materials, no
 hand-drawn backgrounds or custom window chrome. macOS 26 applies Liquid Glass to
 standard controls and system surfaces automatically; Pippin does not apply a
 glass effect to content. Consult `apple-skills:hig` and
@@ -286,12 +291,17 @@ integration problems, Settings/manage-apps entry, and Quit. Address, port,
 session count, backend diagnostics, and raw write terminology leave the menu.
 Refresh happens automatically on appearance and after actions.
 
-Settings uses a standard sidebar and system controls. Real panes are created as
-content lands: General, Apps/Integrations, Privacy, Advanced, and About. General
-may show a disabled read-only **MCP Server** switch whose value mirrors the
-actual running state. It has no setter or side effect in Step 8; the separate
-`08-24-pippin-server-lifecycle-toggle` task owns persistence and runtime wiring.
-This placeholder is acceptable only while the app is development-only.
+Settings uses a `NavigationSplitView` whose standard sidebar is visible by
+default and remains user-toggleable through the standard sidebar control. A
+zero-size system toolbar item, derived from Relay's shell approach, is the
+smallest trigger that keeps the standard unified toolbar/titlebar; Pippin adds
+no custom window chrome.
+Real panes are created as content lands: General, Apps/Integrations, Privacy,
+Advanced, and About. General may show a disabled read-only **MCP Server** switch
+whose value mirrors the actual running state. It has no setter or side effect in
+Step 8; the separate `08-24-pippin-server-lifecycle-toggle` task owns persistence
+and runtime wiring. This placeholder is acceptable only while the app is
+development-only.
 
 The starting window should be compact (approximately 720 × 500 pt) and
 pane-responsive. Do not hand-draw cards or chrome, decorate content with glass,

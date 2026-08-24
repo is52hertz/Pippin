@@ -1,59 +1,62 @@
 # Component Guidelines
 
-> How components are built in this project.
+> Concrete SwiftUI component conventions established by the Pippin app.
 
----
+## Convention: Settings Window Shell
 
-## Overview
+**What:** Pippin Settings is one fixed-ID ordinary SwiftUI `Window`, not a
+SwiftUI `Settings` scene. It suppresses default launch, uses content-minimum
+resizability, and is opened through one shared `OpenWindowAction` control after
+calling modern `NSApp.activate()`.
 
-<!--
-Document your project's component conventions here.
+**Why:** Pippin is an `LSUIElement` menu-bar app with a multi-pane,
+`NavigationSplitView`-based Settings UI. The ordinary window preserves
+menu-bar-only startup while providing standard resizable window controls and
+reliable reopening/raising of the same instance.
 
-Questions to answer:
-- What component patterns do you use?
-- How are props defined?
-- How do you handle composition?
-- What accessibility standards apply?
--->
+```swift
+Window("Pippin Settings", id: PippinWindow.settingsID) {
+    PippinSettingsView(model: model)
+}
+.defaultLaunchBehavior(.suppressed)
+.windowResizability(.contentMinSize)
+```
 
-(To be filled by the team)
+The sidebar is visible by default but remains controlled by the system toolbar
+button. Its visibility must therefore be mutable, window-local state:
 
----
+```swift
+@State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
 
-## Component Structure
+NavigationSplitView(columnVisibility: $columnVisibility) {
+    // Sidebar
+} detail: {
+    // Selected pane
+}
+```
 
-<!-- Standard structure of a component file -->
+A zero-size system `ToolbarItem` is permitted solely to make SwiftUI install the
+unified macOS toolbar/titlebar. Do not draw custom titlebar material or traffic
+lights.
 
-(To be filled by the team)
+### Wrong vs Correct
 
----
+```swift
+// Wrong: the system sidebar button remains visible but cannot change a constant.
+NavigationSplitView(columnVisibility: .constant(.doubleColumn)) { ... }
 
-## Props Conventions
+// Correct: the standard button changes window-local visibility.
+NavigationSplitView(columnVisibility: $columnVisibility) { ... }
+```
 
-<!-- How props should be defined and typed -->
+Do not discover the Settings window by title, use deprecated
+`activate(ignoringOtherApps:)`, or replace the standard sidebar button with a
+custom control.
 
-(To be filled by the team)
+### Required Verification
 
----
-
-## Styling Patterns
-
-<!-- How styles are applied (CSS modules, styled-components, Tailwind, etc.) -->
-
-(To be filled by the team)
-
----
-
-## Accessibility
-
-<!-- A11y requirements and patterns -->
-
-(To be filled by the team)
-
----
-
-## Common Mistakes
-
-<!-- Component-related mistakes your team has made -->
-
-(To be filled by the team)
+- Signed-app launch stays menu-bar-only.
+- Menu `Settings…` and Command-comma raise the same window.
+- Close/reopen and minimize/restore work from the menu-bar entry.
+- The standard sidebar button hides and restores the sidebar.
+- Resizing keeps standard system chrome and materials.
