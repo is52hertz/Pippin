@@ -25,5 +25,6 @@ struct PippinApp: App {
         Settings {
             PippinSettingsView(model: delegate.model)
         }
+        .defaultSize(width: 720, height: 500)
     }
 }

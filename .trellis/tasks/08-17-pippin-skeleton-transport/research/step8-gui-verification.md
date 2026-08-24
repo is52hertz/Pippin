@@ -219,3 +219,31 @@ Verification:
 - Independent `trellis-check`: no open findings; one test-only coverage self-fix.
 
 Settings visuals and final preview/manual AC10 evidence remain in Steps 8C/8D.
+
+## Step 8C Settings redesign — 2026-08-24
+
+Settings now uses a native `NavigationSplitView` and system sidebar with five
+real destinations: General, Apps, Privacy, Advanced, and About. Selection is
+window-local state; every pane reads the same shared presentation model.
+The scene defaults to 720×500pt and remains resizable down to 640×420pt.
+
+General contains service status and the disabled read-only MCP Server
+placeholder. Apps derives presentation-owned names and SF Symbols from stable
+module IDs and labels the write gate **Allow Changes**. Privacy retains the
+honest permission descriptions and existing state-specific actions. Address,
+port, sessions, and manual Refresh live only in Advanced. About reads only real
+bundle metadata and invents no links or license.
+
+Verification:
+
+- `swift build`: passed without warnings.
+- `swift test`: **201 tests in 26 suites**, passed; the added suite verifies
+  presentation-owned integration metadata, fallback naming, symbols, and sort.
+- `Scripts/package_app.sh`: passed.
+- Strict signature, designated requirement, bundle ID, version, and
+  `LSUIElement=true`: passed with the unchanged signing identity.
+- `git diff --check`: passed.
+- Independent `trellis-check`: no findings and no self-fixes.
+
+Step 8D still owns deterministic previews and the final signed-app visual,
+VoiceOver, appearance, and resize evidence required to close AC10.

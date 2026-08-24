@@ -297,7 +297,7 @@ Approved visual-redesign plan (2026-08-24):
       compact user hierarchy, actionable-problems-only body, automatic refresh,
       and semantic icon states. Do not implement server lifecycle. Commit
       independently as `feat(app): redesign menu bar experience`.
-- [ ] **8C — Settings redesign.** Add the standard sidebar/pane information
+- [x] **8C — Settings redesign.** Add the standard sidebar/pane information
       architecture as real content warrants, move diagnostics to Advanced, use
       user-facing integration language, and adopt compact responsive sizing.
       A disabled read-only global server switch may mirror the actual running

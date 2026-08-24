@@ -27,10 +27,6 @@ struct PippinMenuView: View {
         .frame(width: 312)
         .task { await model.refresh() }
     }
-
-    static func title(for module: String) -> String {
-        module.replacing("_", with: " ").capitalized
-    }
 }
 
 private struct PippinMenuHeader: View {
