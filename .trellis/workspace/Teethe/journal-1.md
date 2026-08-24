@@ -86,3 +86,24 @@ Separated passive permission status from explicit user actions, fixed LSUIElemen
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: Pippin Step 8 HIG redesign and verification
+
+**Date**: 2026-08-25
+**Task**: Pippin Step 8 HIG redesign and verification
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Completed Step 8D with deterministic DEBUG previews, a fixed-ID standard Settings window, functional native sidebar toggle, signed-app manual HIG verification, durable frontend guidance, and explicit VoiceOver deferral. Skeleton task remains in progress for Step 9.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `922b9e7` | (see git log) |
+
+### Status
+
+[OK] **Completed**
