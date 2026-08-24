@@ -287,7 +287,7 @@ separate and open.
 
 Approved visual-redesign plan (2026-08-24):
 
-- [ ] **8A — Pure source migration.** Move the existing app files into the lean
+- [x] **8A — Pure source migration.** Move the existing app files into the lean
       `App/Runtime/Presentation/MenuBar/Settings/SharedUI` structure defined in
       `research/step8-ui-architecture.md`. Make no behavior or visual change.
       Verify build, tests, signed packaging, unchanged identity, and no fresh TCC

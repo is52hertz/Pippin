@@ -2,17 +2,6 @@ import Observation
 import PippinCore
 import PippinServer
 
-enum PresentedPermission: Sendable {
-    case reminders
-    case mailAutomation
-    case mailData
-}
-
-struct PermissionActionPresentation: Equatable, Sendable {
-    let action: PermissionAction
-    let title: String
-}
-
 /// One presentation mirror shared by the menu-bar and Settings scenes.
 /// The resident actors remain authoritative for server and permission state.
 @MainActor

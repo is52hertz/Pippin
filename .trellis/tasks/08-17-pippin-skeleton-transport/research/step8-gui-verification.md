@@ -167,3 +167,26 @@ A passive MCP status call after onboarding reported all three effective states a
 `granted`. The bearer token was never printed or logged. This closes the
 functional follow-up; the visual redesign and AC10 remain open and are not part
 of this patch.
+
+## Step 8A source migration — 2026-08-24
+
+The four flat `PippinApp` source files were moved into the approved lean
+`App/Runtime/Presentation/MenuBar/Settings/SharedUI` layout before any visual
+change. Production behavior and view code stayed equivalent; in particular,
+`ServerRuntime` remains coherent in one file and `applicationWillTerminate`
+still removes the endpoint synchronously.
+
+A source-boundary suite parses Swift import declarations and verifies that
+Runtime does not import SwiftUI and presentation surfaces do not import EventKit,
+Carbon, MCP, or NIO. It does not scan arbitrary symbols or layout strings.
+
+Verification:
+
+- `swift build`: passed.
+- `swift test`: **195 tests in 25 suites**, passed.
+- `Scripts/package_app.sh`: passed.
+- `codesign --verify --deep --strict`: passed.
+- Signing identity: unchanged at
+  `1AB7E0BC58C427092143FBADABA7F34CD607775D` (`Pippin Local Signing`).
+- `git diff --check`: passed.
+- Independent `trellis-check`: no findings and no self-fixes.
