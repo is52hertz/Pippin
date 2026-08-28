@@ -1,8 +1,9 @@
 # Reminders Module — Execution Plan
 
-Prerequisite: `08-17-pippin-skeleton-transport` past review gate G2, so the core
-primitives (`ConfirmTokenStore`, `MutationGate`, `AuditLog`, DTO conventions,
-error model, registry) have settled APIs.
+Prerequisites: `08-17-pippin-skeleton-transport` past review gate G2 and
+`08-29-pippin-architecture-reuse-safety-hardening` completed, so the core
+primitives (`ConfirmTokenStore`, `MutationGate`, durable operation journal, DTO
+conventions, error model, registry) have settled APIs.
 
 ## Checklist
 

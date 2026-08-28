@@ -140,14 +140,17 @@ relitigate them.
 | `08-17-pippin-reminders-crud` | Reminders module: full CRUD over EventKit, two-phase delete, iCloud-sync-correct writes | 1 |
 | `08-17-pippin-mail-read-search` | Mail module: read-only search and fetch, proving multi-backend routing and degradation | 1 |
 | `08-24-pippin-server-lifecycle-toggle` | Persistent global MCP Server switch: resident app, conservative stop/start, credential invalidation, and explicit shim disabled-state handling | 1 follow-up |
+| `08-29-pippin-architecture-reuse-safety-hardening` | Upstream-informed reduction of transport duplication plus SQLite, AppleScript, and destructive-journal hardening | 1 prerequisite |
 
-**Ordering:** the skeleton child owns primitives the other two consume, so it
-lands first. Its visual Step 8 may show only a disabled read-only server-switch
-placeholder. The lifecycle-toggle child wires that control before production
-use, but does not block the skeleton's existing Step 9 transport checks.
-Reminders and Mail are independent of each other. This ordering is recorded in
-each child's `implement.md`; parent/child linkage itself carries no dependency
-semantics.
+**Ordering:** the skeleton child owns primitives the other children consume, so
+it lands first. The architecture-reuse/safety child then corrects those
+primitives before Reminders or Mail starts; it does not depend on the skeleton's
+externally blocked Claude Code AC3 because it preserves the transport contract.
+The lifecycle-toggle child wires the disabled UI control before production use
+but does not block the skeleton's existing Step 9 transport checks. Reminders
+and Mail remain independent of each other after the hardening prerequisite.
+This ordering is recorded in each child's artifacts; parent/child linkage itself
+carries no dependency semantics.
 
 ## Cross-Child Acceptance Criteria
 
@@ -258,17 +261,11 @@ O1–O3 answered by the user in `addendum-2026-08-18.md` §1.
       the latter used only by `PippinServer` for the HTTP/1.1 + SSE listener.
 ## Relationship to Task `00-bootstrap-guidelines`
 
-`AGENTS.md` still carries TODO placeholders (Product, Project Phase, Coding
-Standards, Data integrity & concurrency) and every file under `.trellis/spec/` is
-an unfilled template. That is the pre-existing `00-bootstrap-guidelines` task's
-scope, not this one's.
-
-Those placeholders are best filled *from* this design rather than guessed at
-beforehand — the source of truth, module boundaries, and security boundary this
-project needs are exactly what the parent `design.md` settles. Sensible
-sequencing: land the skeleton child, then close `00-bootstrap-guidelines` using
-the now-concrete architecture. Until then, the child tasks' context manifests
-deliberately reference the parent's artifacts instead of the empty spec files.
+The `00-bootstrap-guidelines` task was completed and archived on 2026-08-29.
+`.trellis/spec/` now contains source-backed SwiftPM, MCP, security, data-access,
+SwiftUI, presentation, and quality contracts derived from the landed skeleton.
+The remaining TODO placeholders in `AGENTS.md` are project-profile metadata, not
+empty code-spec guidance; update them separately when the parent task closes.
 
 ## Roadmap
 

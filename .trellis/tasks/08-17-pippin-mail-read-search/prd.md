@@ -76,11 +76,12 @@ routing.
 
 ## Constraints and Notes
 
-- Depends on `08-17-pippin-skeleton-transport` (`SQLiteReader`,
-  `AppleScriptRunner`, `BackendRouter`, error model). Do not start before its
-  gate G2.
+- Depends on `08-17-pippin-skeleton-transport` gate G2 and on
+  `08-29-pippin-architecture-reuse-safety-hardening` replacing the live-SQLite
+  opening policy and adding AppleScript execution budgets. Do not start
+  implementation before both.
 - Independent of `08-17-pippin-reminders-crud`; either may land first after the
-  skeleton.
+  shared hardening prerequisite.
 - Full Disk Access must be granted to `Pippin.app` itself. This is a second,
   separate TCC grant from Automation and is the most likely source of confusing
   failures — hence AC2 and AC10.

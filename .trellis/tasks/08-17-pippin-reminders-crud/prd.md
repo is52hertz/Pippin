@@ -81,8 +81,9 @@ fixing that failure is in scope.
 
 ## Constraints and Notes
 
-- Depends on `08-17-pippin-skeleton-transport` (core primitives, registry,
-  token store, audit log). Do not start before its gate G2.
+- Depends on `08-17-pippin-skeleton-transport` gate G2 and on
+  `08-29-pippin-architecture-reuse-safety-hardening` completing the durable
+  destructive-intent contract. Do not start implementation before both.
 - macOS 14+ requires the full-access Reminders authorization request; the
   Info.plist usage description ships in the skeleton child.
 - Relevant skills: `apple-skills:eventkit`, `apple-skills:swift-testing`.

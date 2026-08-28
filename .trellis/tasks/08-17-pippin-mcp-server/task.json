@@ -22,7 +22,8 @@
     "08-17-pippin-skeleton-transport",
     "08-17-pippin-reminders-crud",
     "08-17-pippin-mail-read-search",
-    "08-24-pippin-server-lifecycle-toggle"
+    "08-24-pippin-server-lifecycle-toggle",
+    "08-29-pippin-architecture-reuse-safety-hardening"
   ],
   "parent": null,
   "relatedFiles": [],

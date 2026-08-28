@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/backend/security-and-transport.md", "reason": "Verify trust boundary, SDK ownership, and mutation safety"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Verify live SQLite correctness and honest failure"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify concurrency and safety tests"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Check for duplicated owners and speculative abstractions"}
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/prd.md", "reason": "Verify parent constraints and cross-child gates"}
+{"file": ".trellis/tasks/08-29-pippin-architecture-reuse-safety-hardening/research/implementation-brief.md", "reason": "Verify retained scope, safety contracts, and required gates"}

@@ -1,8 +1,9 @@
 # Mail Module — Execution Plan
 
-Prerequisite: `08-17-pippin-skeleton-transport` past review gate G2
-(`SQLiteReader`, `AppleScriptRunner`, `BackendRouter`, error model settled).
-Independent of the Reminders child.
+Prerequisites: `08-17-pippin-skeleton-transport` past review gate G2 and
+`08-29-pippin-architecture-reuse-safety-hardening` completed (`SQLiteReader`,
+AppleScript execution budgets, `BackendRouter`, and error model settled).
+Independent of the Reminders child after those shared prerequisites.
 
 ## Checklist
 
