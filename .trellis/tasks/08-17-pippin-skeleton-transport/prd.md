@@ -75,7 +75,7 @@ written against them.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** `Scripts/package_app.sh` produces `Pippin.app`; `codesign -dv`
+- [x] **AC1** `Scripts/package_app.sh` produces `Pippin.app`; `codesign -dv`
       reports the expected identity; `ls -R Pippin.app/Contents` shows the
       expected structure with `LSUIElement` and all usage descriptions present.
 - [ ] **AC2** Signing identity is byte-identical across three consecutive
@@ -83,29 +83,29 @@ written against them.
       with no fresh TCC prompt. (Feeds parent A1.)
 - [ ] **AC3** Claude Code connects over HTTP and lists exactly the enabled tools;
       Claude Code connects through `pippin-shim` and lists the same set.
-- [ ] **AC4** Two clients connected at once are served by one resident app
+- [x] **AC4** Two clients connected at once are served by one resident app
       process. A shim adds no shared or persistent state: each shim process holds
       only the temporary transport/session state scoped to its own stdio
       connection, and all of it disappears when that process exits. All shared
       business state and Apple-data handles remain owned exclusively by the one
       resident `Pippin.app` process. Verified by process inspection plus a config
       change that both clients observe. (Feeds parent A4.)
-- [ ] **AC5** A request with a missing or wrong bearer token is rejected 401. A
+- [x] **AC5** A request with a missing or wrong bearer token is rejected 401. A
       request with a non-loopback `Origin` is rejected. A config with a
       non-loopback `bind` is refused at startup with a clear error.
-- [ ] **AC6** Disabling a module removes its tools from `tools/list` after one
+- [x] **AC6** Disabling a module removes its tools from `tools/list` after one
       `list_changed` cycle, without restarting the app.
-- [ ] **AC7** `pippin_status` reports each permission's real state, including
+- [x] **AC7** `pippin_status` reports each permission's real state, including
       correctly reporting *not yet determined* versus *denied*.
-- [ ] **AC8** Shim failure paths are actionable: app not running and cannot be
+- [x] **AC8** Shim failure paths are actionable: app not running and cannot be
       launched, `endpoint.json` missing, readiness timeout — each yields a
       distinct message, and none hangs.
-- [ ] **AC9** Unit tests cover confirm-token lifecycle (TTL, single-use, ID-set
+- [x] **AC9** Unit tests cover confirm-token lifecycle (TTL, single-use, ID-set
       binding, session binding), registry gating, loopback-bind validation,
       AppleScript argument escaping, and the `tools/list` byte budget.
 - [x] **AC10** GUI reviewed against HIG: standard controls, system materials, no
       custom chrome, correct menu bar behaviour for an `LSUIElement` app.
-- [ ] **AC11** Token validation is tier-ready: a token resolves to a capability
+- [x] **AC11** Token validation is tier-ready: a token resolves to a capability
       set rather than to a boolean, and adding a second token with a read-only
       capability set requires no change to the request path or the registry.
       Demonstrated by a unit test that registers two tokens with different

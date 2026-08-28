@@ -351,11 +351,33 @@ the existing transport contract independently of the planned lifecycle child.
       lists. AC3. External prerequisite: restore Claude Code organization access
       or provide an Anthropic API key; until then, retain the protocol-level and
       Codex smoke evidence without marking AC3 complete.
-- [ ] Two concurrent clients, one process, shared state, config change observed
+- [x] Two concurrent clients, one process, shared state, config change observed
       by both. AC4.
 - [ ] Three rebuild-repackage cycles with no fresh TCC prompt. AC2.
-- [ ] Re-run the whole acceptance list; record results in the manual checklist
+- [x] Re-run the whole acceptance list; record results in the manual checklist
       derived from `Test/templates-test-checklist.html`.
+
+Partial Step 9 result (2026-08-28): all non-Claude automated and live transport
+checks pass. Three consecutive package/sign cycles produced byte-identical
+certificate fingerprints and designated requirements. The final signed bundle
+retained passive Reminders and Mail Data access, but explicit user confirmation
+that no fresh TCC prompt appeared remains open, so AC2 is not yet checked.
+
+Two bundled shim clients simultaneously held distinct MCP sessions while one
+resident signed Pippin process reported `sessions=2`; both clients observed the
+same tool list and module state. The existing real SDK integration test was
+rerun and proved shared config updates plus `tools/list_changed` propagation to
+both affected sessions. Codex independently called `pippin_status` through the
+bundled shim and direct Streamable HTTP, both reporting version 0.1.0. The HTTP
+credential existed only in the invocation's environment and was absent from
+arguments, persistent config, stdout, stderr, and evidence.
+
+Claude Code 2.1.250 is installed but currently reports `loggedIn=false`; no
+Anthropic API key is available. Pippin did not attempt login or alter Claude
+configuration. AC3 and the first Step 9 item remain externally blocked rather
+than failed. Full evidence and the public-safe checklist are in
+`research/step9-integration-verification.md` and
+`research/step9-acceptance-checklist.html`.
 
 ## Validation Commands
 
