@@ -40,9 +40,9 @@ status call through its bundled shim still reported Reminders and effective Mail
 Data access as granted. Mail Automation was unavailable because Mail was not
 running; this is the designed non-prompting state, not permission loss.
 
-No automated observation can prove that a GUI prompt was absent from the user's
-screen. AC2 therefore remains open until the user confirms that the three cycles
-caused no fresh TCC prompt.
+On 2026-08-29, the user confirmed that the three cycles caused no fresh
+Reminders, Automation, or Full Disk Access prompt. Together with the identical
+certificate fingerprints and retained passive grants, this closes AC2.
 
 ## Live concurrent clients
 
@@ -95,7 +95,7 @@ interactive login or persist MCP configuration. Consequently:
 | Criterion | Status | Evidence |
 |---|---|---|
 | AC1 package and signature | Pass | three packages plus bundle/signature inspection |
-| AC2 TCC stability | Awaiting user confirmation | identity and passive grants stable; prompt absence is manual |
+| AC2 TCC stability | Pass | identity and passive grants stable; user confirmed no fresh prompt |
 | AC3 Claude Code HTTP + shim | Blocked | Claude Code logged out; no API key |
 | AC4 single-owner concurrency | Pass | two live shim clients, one app, shared-state transport test |
 | AC5 validators | Pass | HTTP validator and live transport suites |
@@ -106,5 +106,5 @@ interactive login or persist MCP configuration. Consequently:
 | AC10 HIG | Pass | Step 8 signed-app review |
 | AC11 tier-ready tokens | Pass | two-token capability test |
 
-Step 9 and the skeleton task remain in progress until AC2 is confirmed and AC3
-can run with restored Claude Code access.
+Step 9 and the skeleton task remain in progress only because AC3 requires
+restored Claude Code access.

@@ -34,7 +34,7 @@
   <section><h2>1 · 构建与稳定签名</h2>
     <div class="item"><div class="status pass">✓ 通过</div><div>Debug、Release、201 项测试及三次连续打包均通过。</div></div>
     <div class="item"><div class="status pass">✓ 通过</div><div>三轮证书 SHA-1、SHA-256、Authority、Bundle ID 与 designated requirement 完全一致。</div></div>
-    <div class="item"><div class="status open">· 待确认</div><div>请用户确认三轮期间屏幕上没有出现新的 TCC 授权提示；被动权限快照与既有 grant 均保持可用。</div></div>
+    <div class="item"><div class="status pass">✓ 通过</div><div>用户确认三轮期间没有出现新的 Reminders、Automation 或 Full Disk Access 提示；被动权限快照与既有 grant 均保持可用。</div></div>
   </section>
 
   <section><h2>2 · Transport 与单一状态所有者</h2>
@@ -55,6 +55,6 @@
     <div class="item"><div class="status pass">✓ 通过</div><div>bearer token 未进入仓库、命令参数、持久配置、日志或证据。</div></div>
   </section>
 
-  <footer>当前结论：AC1、AC4–AC11 通过；AC2 等待人工确认；AC3 因 Claude Code 外部凭据阻塞。</footer>
+  <footer>当前结论：AC1、AC2、AC4–AC11 通过；仅 AC3 因 Claude Code 外部凭据阻塞。</footer>
 </main></body>
 </html>

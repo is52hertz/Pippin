@@ -78,7 +78,7 @@ written against them.
 - [x] **AC1** `Scripts/package_app.sh` produces `Pippin.app`; `codesign -dv`
       reports the expected identity; `ls -R Pippin.app/Contents` shows the
       expected structure with `LSUIElement` and all usage descriptions present.
-- [ ] **AC2** Signing identity is byte-identical across three consecutive
+- [x] **AC2** Signing identity is byte-identical across three consecutive
       rebuild-and-repackage cycles, and a permission-dependent call keeps working
       with no fresh TCC prompt. (Feeds parent A1.)
 - [ ] **AC3** Claude Code connects over HTTP and lists exactly the enabled tools;

@@ -353,15 +353,16 @@ the existing transport contract independently of the planned lifecycle child.
       Codex smoke evidence without marking AC3 complete.
 - [x] Two concurrent clients, one process, shared state, config change observed
       by both. AC4.
-- [ ] Three rebuild-repackage cycles with no fresh TCC prompt. AC2.
+- [x] Three rebuild-repackage cycles with no fresh TCC prompt. AC2.
 - [x] Re-run the whole acceptance list; record results in the manual checklist
       derived from `Test/templates-test-checklist.html`.
 
-Partial Step 9 result (2026-08-28): all non-Claude automated and live transport
+Partial Step 9 result (2026-08-28; TCC confirmation added 2026-08-29): all non-Claude automated and live transport
 checks pass. Three consecutive package/sign cycles produced byte-identical
 certificate fingerprints and designated requirements. The final signed bundle
-retained passive Reminders and Mail Data access, but explicit user confirmation
-that no fresh TCC prompt appeared remains open, so AC2 is not yet checked.
+retained passive Reminders and Mail Data access. The user confirmed that none of
+the three cycles produced a fresh Reminders, Automation, or Full Disk Access
+prompt, closing AC2.
 
 Two bundled shim clients simultaneously held distinct MCP sessions while one
 resident signed Pippin process reported `sessions=2`; both clients observed the
