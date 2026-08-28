@@ -107,3 +107,25 @@ Completed Step 8D with deterministic DEBUG previews, a fixed-ID standard Setting
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: Bootstrap specs and architecture reuse audit
+
+**Date**: 2026-08-29
+**Task**: Bootstrap specs and architecture reuse audit
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Completed and archived bootstrap guidelines; recorded upstream MCP/macOS audit; planned a P0 shared-primitives hardening prerequisite for Reminders and Mail without starting implementation.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ea718c4` | (see git log) |
+| `e9f4596` | (see git log) |
+
+### Status
+
+[OK] **Completed**
