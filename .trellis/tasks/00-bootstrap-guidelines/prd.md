@@ -21,9 +21,9 @@ the rest conversationally.
 
 ## Status (update the checkboxes as you complete each item)
 
-- [ ] Fill backend guidelines
-- [ ] Fill frontend guidelines
-- [ ] Add code examples
+- [x] Fill backend guidelines
+- [x] Fill frontend guidelines
+- [x] Add code examples
 
 ---
 
@@ -39,18 +39,21 @@ the rest conversationally.
 | `.trellis/spec/backend/error-handling.md` | How errors are caught, logged, and returned |
 | `.trellis/spec/backend/logging-guidelines.md` | Log levels, format, what to log |
 | `.trellis/spec/backend/quality-guidelines.md` | Code review standards, testing requirements |
+| `.trellis/spec/backend/security-and-transport.md` | Local trust boundary, request validation, sessions, and tool safety |
 
 
 ### Frontend guidelines
 
 | File | What to document |
 |------|------------------|
-| `.trellis/spec/frontend/directory-structure.md` | Component/page/hook organization |
-| `.trellis/spec/frontend/component-guidelines.md` | Component patterns, props conventions |
-| `.trellis/spec/frontend/hook-guidelines.md` | Custom hook naming, patterns |
-| `.trellis/spec/frontend/state-management.md` | State library, patterns, what goes where |
-| `.trellis/spec/frontend/type-safety.md` | TypeScript conventions, type organization |
-| `.trellis/spec/frontend/quality-guidelines.md` | Linting, testing, accessibility |
+| `.trellis/spec/frontend/directory-structure.md` | App, view, presentation, runtime, and shared-control organization |
+| `.trellis/spec/frontend/component-guidelines.md` | SwiftUI composition and explicit model flow |
+| `.trellis/spec/frontend/state-management.md` | Actor-owned runtime state, presentation mirrors, and update ordering |
+| `.trellis/spec/frontend/presentation-guidelines.md` | Runtime-to-UI projections, labels, actions, and error presentation |
+| `.trellis/spec/frontend/quality-guidelines.md` | Concurrency, testing, accessibility, and verification |
+
+The generic hook and browser type-system scaffolds were removed because Pippin
+is a native SwiftUI application and those files describe no project convention.
 
 
 ### Thinking guides (already populated)

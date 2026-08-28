@@ -1,38 +1,21 @@
-# Backend Development Guidelines
+# Backend Specifications
 
-> Best practices for backend development in this project.
+These rules cover the SwiftPM service layers in `Sources/PippinCore`,
+`Sources/PippinModules`, and `Sources/PippinServer`.
 
----
+## Pre-Development Checklist
 
-## Overview
+- Read [Directory Structure](./directory-structure.md) before placing code.
+- Read [Security and Transport](./security-and-transport.md) for any request,
+  session, tool, AppleScript, SQLite, token, or listener change.
+- Read [Database Guidelines](./database-guidelines.md) when accessing SQLite or
+  another application's data.
+- Read [Error Handling](./error-handling.md) and [Logging](./logging-guidelines.md)
+  when adding a failure path or operational event.
+- Read [Quality](./quality-guidelines.md) before writing or running tests.
 
-This directory contains guidelines for backend development. Fill in each file with your project's specific conventions.
+## Non-Negotiable Boundary
 
----
-
-## Guidelines Index
-
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
-| [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
-
----
-
-## How to Fill These Guidelines
-
-For each guideline file:
-
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+`PippinCore` must remain independent of MCP, SwiftNIO, SwiftUI, and AppKit.
+`Package.swift` expresses this in the target graph; transport adaptation belongs
+in `PippinServer`, while application lifecycle and UI belong in `PippinApp`.

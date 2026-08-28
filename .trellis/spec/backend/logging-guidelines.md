@@ -1,51 +1,18 @@
 # Logging Guidelines
 
-> How logging is done in this project.
+Server-side operational logging uses `swift-log` `Logger` values injected with
+stable labels such as `pippin.server` and `pippin.http`.
 
----
+- Use `info` for lifecycle events: listener address, session opened, session
+  expired.
+- Use `warning` for recoverable degradation: configured-port fallback and a
+  failed tool-list notification to one session.
+- Attach small structured metadata when it identifies the operational unit;
+  `ServerHost` uses `session`, `identity`, and `error` metadata.
+- Log once at the layer that owns the operation. Lower-level code should return
+  `PippinError`; the owning server/runtime decides whether an event is useful.
 
-## Overview
-
-<!--
-Document your project's logging conventions here.
-
-Questions to answer:
-- What logging library do you use?
-- What are the log levels and when to use each?
-- What should be logged?
-- What should NOT be logged (PII, secrets)?
--->
-
-(To be filled by the team)
-
----
-
-## Log Levels
-
-<!-- When to use each level: debug, info, warn, error -->
-
-(To be filled by the team)
-
----
-
-## Structured Logging
-
-<!-- Log format, required fields -->
-
-(To be filled by the team)
-
----
-
-## What to Log
-
-<!-- Important events to log -->
-
-(To be filled by the team)
-
----
-
-## What NOT to Log
-
-<!-- Sensitive data, PII, secrets -->
-
-(To be filled by the team)
+Never log bearer tokens, confirmation tokens, request bodies, tool argument
+values, SQLite row contents, AppleScript output, or personal data. Avoid routine
+per-request success logs and duplicate logs at each layer. User recovery belongs
+in `PippinError.hint`, not only in a log line.

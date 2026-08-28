@@ -30,12 +30,10 @@ These guides help you **ask the right questions before coding**.
 
 ### When to Think About Cross-Layer Issues
 
-- [ ] Feature touches 3+ layers (API, Service, Component, Database)
-- [ ] Data format changes between layers
-- [ ] Multiple consumers need the same data
-- [ ] You're not sure where to put some logic
-- [ ] You are adding an event kind, JSONL record, RPC payload, or config field
-- [ ] UI / command code starts casting raw payload fields directly
+- [ ] A change crosses SwiftPM targets, actor boundaries, persistence, or SwiftUI
+- [ ] An MCP request/response, runtime snapshot, or config shape changes
+- [ ] Tool registration, visibility, dispatch, or token-budget accounting changes
+- [ ] Permission or lifecycle state gains a producer or presentation consumer
 
 → Read [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md)
 
@@ -46,8 +44,8 @@ These guides help you **ask the right questions before coding**.
 - [ ] You're adding a new field to multiple places
 - [ ] **You're modifying any constant or config**
 - [ ] **You're creating a new utility/helper function** ← Search first!
-- [ ] Two files read the same untyped payload field with local casts
-- [ ] Multiple branches update the same derived state from `kind` / `action`
+- [ ] Multiple views derive the same label, symbol, or permission action
+- [ ] Multiple layers repeat the same tool/config visibility decision
 
 → Read [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md)
 
@@ -73,7 +71,7 @@ These guides help you **ask the right questions before coding**.
 
 ```bash
 # Search for the value you're about to change
-grep -r "value_to_change" .
+rg "value_to_change" Sources Tests .trellis/spec
 ```
 
 This single habit prevents most "forgot to update X" bugs.
