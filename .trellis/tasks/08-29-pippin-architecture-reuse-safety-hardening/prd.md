@@ -50,8 +50,10 @@ real Apple data modules depend on them.
   license file and is design reference only. No copied upstream protocol stack
   replaces the official SDK.
 - **R8 — No feature expansion.** This task adds no Reminders or Mail production
-  tool, no UI, no server lifecycle behavior, no signing change, and no new
-  third-party dependency.
+  tool, no UI, no app/server enable-disable lifecycle behavior, no signing
+  change, and no new third-party dependency. MCP session cleanup may be aligned
+  with the pinned SDK conformance host when the observable behavior is covered
+  by protocol regression tests.
 
 ## Non-Requirements
 

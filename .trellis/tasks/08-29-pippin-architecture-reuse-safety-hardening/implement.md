@@ -5,19 +5,19 @@ primitives only and adds no production module tools.
 
 ## Step 0 — Freeze upstream and OS contracts · Gate G0
 
-- [ ] Re-check the exact swift-sdk 0.12.1 `StatefulHTTPServerTransport`,
+- [x] Re-check the exact swift-sdk 0.12.1 `StatefulHTTPServerTransport`,
       `HTTPClientTransport`, `StdioTransport`, conformance `HTTPApp`, and package
       products against `research/upstream-reuse-audit.md`.
-- [ ] Diff Pippin's listener/session host against the conformance host and list
+- [x] Diff Pippin's listener/session host against the conformance host and list
       every retained deviation with its Pippin policy reason.
-- [ ] Verify SQLite read-only/WAL/busy semantics against SQLite primary docs and
+- [x] Verify SQLite read-only/WAL/busy semantics against SQLite primary docs and
       a scratch fixture; freeze the target open flags and timeout.
-- [ ] Verify a race-safe Darwin process-group creation and kill strategy without
+- [x] Verify a race-safe Darwin process-group creation and kill strategy without
       adding a dependency. Stop if the guarantee cannot be implemented honestly.
-- [ ] Freeze the shared mutation-journal order, recovery probe, and compact
+- [x] Freeze the shared mutation-journal order, recovery probe, and compact
       post-mutation `audit_degraded` envelope without adding an error code.
-- **G0:** update `design.md` with measured/verified details and obtain review
-  before production edits.
+- **G0: PASS (2026-08-30).** Updated `design.md` with measured/verified details
+  and obtained independent review before production edits.
 
 ## Step 1 — Minimize the HTTP host adapter
 
