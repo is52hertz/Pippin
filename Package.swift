@@ -48,7 +48,11 @@ let package = Package(
 
         .executableTarget(name: "pippin-shim", dependencies: ["PippinShim"]),
 
-        .testTarget(name: "PippinCoreTests", dependencies: ["PippinCore"]),
+        .testTarget(
+            name: "PippinCoreTests",
+            dependencies: ["PippinCore"],
+            exclude: ["Fixtures"]
+        ),
         .testTarget(name: "PippinServerTests", dependencies: ["PippinServer"]),
         .testTarget(
             name: "PippinAppTests",

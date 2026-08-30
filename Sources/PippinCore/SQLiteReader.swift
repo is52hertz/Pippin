@@ -22,12 +22,8 @@ public final class SQLiteReader: @unchecked Sendable {
     public init(path: String) throws {
         self.path = path
 
-        // SQLITE_OPEN_READONLY plus the `immutable` URI flag: the owning app may
-        // hold a write lock, and without `immutable` we would block on it or
-        // fail. We never write, so treating the file as immutable is honest.
-        let uri = "file:\(path)?immutable=1"
-        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_URI
-        guard sqlite3_open_v2(uri, &handle, flags, nil) == SQLITE_OK else {
+        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_PRIVATECACHE
+        guard sqlite3_open_v2(path, &handle, flags, nil) == SQLITE_OK else {
             let message = handle.map { String(cString: sqlite3_errmsg($0)) } ?? "unknown"
             sqlite3_close(handle)
             handle = nil
@@ -37,6 +33,27 @@ public final class SQLiteReader: @unchecked Sendable {
                 hint: Self.isPermissionProblem(path: path)
                     ? "Grant Pippin Full Disk Access in System Settings › Privacy & Security, then retry."
                     : "Could not open the data store: \(message)"
+            )
+        }
+
+        guard let handle, sqlite3_db_readonly(handle, "main") == 1 else {
+            sqlite3_close(handle)
+            self.handle = nil
+            throw PippinError(
+                .backendUnavailable,
+                detail: (path as NSString).lastPathComponent,
+                hint: "The data store could not be verified as read-only. Pippin will not access it."
+            )
+        }
+
+        guard sqlite3_busy_timeout(handle, 250) == SQLITE_OK else {
+            let message = String(cString: sqlite3_errmsg(handle))
+            sqlite3_close(handle)
+            self.handle = nil
+            throw PippinError(
+                .backendUnavailable,
+                detail: (path as NSString).lastPathComponent,
+                hint: "Could not configure bounded SQLite lock waiting: \(message)"
             )
         }
     }
@@ -192,12 +209,12 @@ public final class SQLiteReader: @unchecked Sendable {
             }
 
             var statement: OpaquePointer?
-            guard sqlite3_prepare_v2(handle, sql, -1, &statement, nil) == SQLITE_OK else {
-                let message = String(cString: sqlite3_errmsg(handle))
-                throw PippinError(
-                    .backendUnavailable,
-                    detail: "sqlite",
-                    hint: "Query failed: \(message). The schema may have changed."
+            let prepareStatus = sqlite3_prepare_v2(handle, sql, -1, &statement, nil)
+            guard prepareStatus == SQLITE_OK else {
+                throw Self.queryError(
+                    handle: handle,
+                    status: prepareStatus,
+                    fallbackHint: "The schema may have changed."
                 )
             }
             defer { sqlite3_finalize(statement) }
@@ -219,15 +236,35 @@ public final class SQLiteReader: @unchecked Sendable {
             // empty result — indistinguishable from a true answer, which is the
             // one failure mode this tier must never produce (criterion A7).
             guard step == SQLITE_DONE else {
-                let message = String(cString: sqlite3_errmsg(handle))
-                throw PippinError(
-                    .backendUnavailable,
-                    detail: "sqlite",
-                    hint: "The query did not complete: \(message)."
+                throw Self.queryError(
+                    handle: handle,
+                    status: step,
+                    fallbackHint: "The query did not complete."
                 )
             }
             return results
         }
+    }
+
+    private static func queryError(
+        handle: OpaquePointer,
+        status: Int32,
+        fallbackHint: String
+    ) -> PippinError {
+        let primaryCode = status & 0xff
+        if primaryCode == SQLITE_BUSY || primaryCode == SQLITE_LOCKED {
+            return PippinError(
+                .backendUnavailable,
+                detail: "sqlite",
+                hint: "The data store is busy. Retry shortly; Pippin may use its fallback if contention continues."
+            )
+        }
+        let message = String(cString: sqlite3_errmsg(handle))
+        return PippinError(
+            .backendUnavailable,
+            detail: "sqlite",
+            hint: "Query failed: \(message). \(fallbackHint)"
+        )
     }
 }
 

@@ -186,7 +186,7 @@ private final class PippinHTTPHandler: ChannelInboundHandler, @unchecked Sendabl
         nonisolated(unsafe) let ctx = context
         let loop = ctx.eventLoop
 
-        func writeHead() {
+        @Sendable func writeHead() {
             var head = HTTPResponseHead(
                 version: version,
                 status: HTTPResponseStatus(statusCode: response.statusCode)

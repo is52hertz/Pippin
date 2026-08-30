@@ -3,6 +3,23 @@ import Testing
 
 @testable import PippinCore
 
+private final class AuditFailurePlan: @unchecked Sendable {
+    private let lock = NSLock()
+    private var remaining: [AuditLog.FailurePoint: Int]
+
+    init(_ failures: [AuditLog.FailurePoint: Int]) {
+        self.remaining = failures
+    }
+
+    func shouldFail(_ point: AuditLog.FailurePoint) -> Bool {
+        lock.withLock {
+            guard let count = remaining[point], count > 0 else { return false }
+            remaining[point] = count - 1
+            return true
+        }
+    }
+}
+
 @Suite("Mutation gate")
 struct MutationGateTests {
     private func gate(
@@ -130,6 +147,10 @@ struct AuditLogTests {
         let mode = try FileManager.default
             .attributesOfItem(atPath: url.path(percentEncoded: false))[.posixPermissions] as? NSNumber
         #expect(mode?.int16Value == 0o600)
+        let directoryMode = try FileManager.default.attributesOfItem(
+            atPath: url.deletingLastPathComponent().path(percentEncoded: false)
+        )[.posixPermissions] as? NSNumber
+        #expect(directoryMode?.int16Value == 0o700)
     }
 
     @Test("entries accumulate in order")
@@ -144,12 +165,104 @@ struct AuditLogTests {
         #expect(try await log.entries().map(\.tool) == (0..<5).map { "tool-\($0)" })
     }
 
-    @Test("an unwritable location never fails the caller's operation")
+    @Test("an unwritable location remains best-effort for non-mutations")
     func writeFailureIsSwallowed() async {
-        // Losing an audit line is bad; refusing the delete the user asked for
-        // because of it is worse.
         let log = AuditLog(url: URL(fileURLWithPath: "/dev/null/impossible/audit.jsonl"))
-        await log.record(tool: "t", outcome: .succeeded)
+        await log.record(tool: "t", outcome: .refused)
+    }
+
+    @Test("required intent and outcome share one operation ID")
+    func operationIDCorrelatesIntentAndOutcome() async throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let log = AuditLog(url: url)
+
+        let operationID = try await log.beginMutation(
+            tool: "t", module: "reminders", ids: ["R1"])
+        try await log.finishMutation(
+            operationID: operationID,
+            tool: "t",
+            module: "reminders",
+            ids: ["R1"],
+            outcome: .succeeded
+        )
+
+        let entries = try await log.entries()
+        #expect(entries.map(\.outcome) == [.intent, .succeeded])
+        #expect(entries.map(\.operationID) == [operationID, operationID])
+    }
+
+    @Test("valid unterminated and torn tails are isolated before a required intent")
+    func tailIsolation() async throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let log = AuditLog(url: url)
+        await log.record(tool: "old", outcome: .refused)
+        var validWithoutNewline = try Data(contentsOf: url)
+        validWithoutNewline.removeLast()
+        try validWithoutNewline.write(to: url)
+
+        _ = try await log.beginMutation(tool: "after-valid-tail")
+        #expect(try await log.entries().map(\.tool) == ["old", "after-valid-tail"])
+
+        try Data(#"{"torn":"#.utf8).write(to: url)
+        _ = try await log.beginMutation(tool: "after-torn-tail")
+        let raw = try String(contentsOf: url, encoding: .utf8)
+        #expect(raw.contains("{\"torn\":\n{") == true)
+        #expect(try await log.entries().map(\.tool) == ["after-torn-tail"])
+    }
+
+    @Test("rotation keeps exactly one previous generation")
+    func oneGenerationRotation() async throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(repeating: 0x78, count: 64).write(to: url)
+        try Data("older".utf8).write(to: url.appendingPathExtension("1"))
+        let log = AuditLog(url: url, rotationThreshold: 32, shouldFail: { _ in false })
+
+        _ = try await log.beginMutation(tool: "rotated-intent")
+
+        #expect(try Data(contentsOf: url.appendingPathExtension("1")) == Data(repeating: 0x78, count: 64))
+        #expect(FileManager.default.fileExists(
+            atPath: url.appendingPathExtension("2").path(percentEncoded: false)
+        ) == false)
+        #expect(try await log.entries().map(\.tool) == ["rotated-intent"])
+        let mode = try FileManager.default.attributesOfItem(
+            atPath: url.path(percentEncoded: false)
+        )[.posixPermissions] as? NSNumber
+        #expect(mode?.int16Value == 0o600)
+    }
+
+    @Test(
+        "every required rotation boundary propagates failure",
+        arguments: AuditLog.FailurePoint.allCases.filter {
+            switch $0 {
+            case .intentAppend, .intentSynchronize, .outcomeAppend, .outcomeSynchronize:
+                false
+            default:
+                true
+            }
+        }
+    )
+    func rotationFailurePropagates(point: AuditLog.FailurePoint) async throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(repeating: 0x78, count: 64).write(to: url)
+        let plan = AuditFailurePlan([point: 1])
+        let log = AuditLog(
+            url: url,
+            rotationThreshold: 32,
+            shouldFail: plan.shouldFail
+        )
+
+        await #expect(throws: (any Error).self) {
+            _ = try await log.beginMutation(tool: "must-not-run")
+        }
+        #expect(await log.isHealthy() == false)
     }
 }
 

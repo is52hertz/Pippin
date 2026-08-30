@@ -47,6 +47,24 @@ public struct ToolContext: Sendable {
         MutationGate(config: config, capabilities: capabilities)
     }
 
+    /// The single owner for ordinary mutation sequencing.
+    public func performMutation(
+        tool: String,
+        module: String,
+        ids: [String] = [],
+        arguments: [String: String]? = nil,
+        perform: () async throws -> [String: JSONValue]
+    ) async throws -> [String: JSONValue] {
+        try gate.check(.write, module: module)
+        return try await performMutationAfterGate(
+            tool: tool,
+            module: module,
+            ids: ids,
+            arguments: arguments,
+            perform: perform
+        )
+    }
+
     /// The full two-phase delete protocol, in one place.
     ///
     /// Every destructive tool in every module routes through this, so the
@@ -59,7 +77,7 @@ public struct ToolContext: Sendable {
         ids: [String],
         confirmToken: String?,
         preview: () async throws -> JSONValue,
-        perform: () async throws -> JSONValue
+        perform: () async throws -> [String: JSONValue]
     ) async throws -> JSONValue {
         try gate.check(.destructive, module: module)
 
@@ -86,13 +104,73 @@ public struct ToolContext: Sendable {
             throw error
         }
 
+        return .object(try await performMutationAfterGate(
+            tool: tool,
+            module: module,
+            ids: ids,
+            arguments: nil,
+            perform: perform
+        ))
+    }
+
+    private func performMutationAfterGate(
+        tool: String,
+        module: String,
+        ids: [String],
+        arguments: [String: String]?,
+        perform: () async throws -> [String: JSONValue]
+    ) async throws -> [String: JSONValue] {
+        let operationID: UUID
         do {
-            let result = try await perform()
-            await audit.record(tool: tool, module: module, ids: ids, outcome: .succeeded)
-            return result
-        } catch let error as PippinError {
-            await audit.record(tool: tool, module: module, ids: ids, outcome: .failed, error: error)
+            operationID = try await audit.beginMutation(
+                tool: tool,
+                module: module,
+                ids: ids,
+                arguments: arguments
+            )
+        } catch {
+            throw PippinError(
+                .backendUnavailable,
+                detail: "audit_log",
+                hint: "Pippin could not record a durable mutation intent. Fix audit-log storage, then retry; no Apple data was changed."
+            )
+        }
+
+        let result: [String: JSONValue]
+        do {
+            result = try await perform()
+        } catch {
+            let projected = error as? PippinError
+                ?? PippinError(.backendUnavailable, detail: "operation")
+            try? await audit.finishMutation(
+                operationID: operationID,
+                tool: tool,
+                module: module,
+                ids: ids,
+                outcome: .failed,
+                error: projected,
+                arguments: arguments
+            )
             throw error
+        }
+
+        do {
+            try await audit.finishMutation(
+                operationID: operationID,
+                tool: tool,
+                module: module,
+                ids: ids,
+                outcome: .succeeded,
+                arguments: arguments
+            )
+            return result
+        } catch {
+            var degraded = result
+            degraded["audit_degraded"] = .bool(true)
+            degraded["audit_hint"] = .string(
+                "Mutation succeeded. Audit outcome unavailable; do not retry. Later mutations stay blocked until audit storage recovers."
+            )
+            return degraded
         }
     }
 }

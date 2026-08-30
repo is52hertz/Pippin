@@ -23,12 +23,14 @@ modified by another macOS application, beginning with Mail's Envelope Index.
 
 ### 3. Contracts
 
-- Open live private stores with a true read-only connection, and validate change
-  visibility and WAL behavior against the owning application's writes. The
-  current `SQLiteReader` appends `immutable=1`; this is a known implementation
-  limitation pending the architecture-hardening task, not a pattern to copy.
-  New integrations and integrations reading actively modified stores must not
-  use `immutable=1`.
+- Open the ordinary path with
+  `SQLITE_OPEN_READONLY | SQLITE_OPEN_PRIVATECACHE`, then require
+  `sqlite3_db_readonly(handle, "main") == 1`. Configure a 250 ms
+  `sqlite3_busy_timeout`. Never assert `immutable=1` or use URI mode for a live
+  store owned and changed by another app.
+- Validate change visibility and WAL behavior against the owning application's
+  writes. A long-lived reader must observe a later committed WAL change on its
+  next statement.
 - Resolve versioned private-store paths at runtime with
   `SQLiteReader.resolveVersionedPath`; never hard-code a Mail `V10`-style
   version directory.
@@ -48,7 +50,9 @@ modified by another macOS application, beginning with Mail's Envelope Index.
 | Mail directory cannot be listed/read | `backend_unavailable` with Full Disk Access hint |
 | No matching version directory | `backend_unavailable`; never hard-code a fallback version |
 | Required table or column missing | disable/degrade SQLite backend with recorded reason |
-| Prepare, bind, or terminal step failure | explicit error; never return fabricated zero rows |
+| Read-only verification or busy-timeout setup fails | `backend_unavailable`; do not query |
+| Prepare/step returns primary or extended `BUSY` / `LOCKED` | `backend_unavailable` with retry/fallback guidance |
+| Other prepare, bind, or terminal step failure | explicit schema/query error; never return fabricated zero rows |
 | SQLite unavailable but fallback succeeds | response marked `degraded` with reason |
 | All backends unavailable | throw actionable `PippinError` |
 
@@ -68,9 +72,10 @@ it throws rather than returning a fabricated empty answer.
 
 ### 6. Tests Required
 
-- `Tests/PippinCoreTests/SQLiteReaderTests.swift`: read-only opening, version
-  resolution, bound injection payloads, schema mismatch, missing path, and
-  terminal query failure.
+- `Tests/PippinCoreTests/SQLiteReaderTests.swift`: read-only opening, actual WAL
+  mode plus later-commit visibility on one reader, rollback-journal contention
+  returning inside the 750 ms test bound, version resolution, bound injection
+  payloads, schema mismatch, missing path, and terminal query failure.
 - `Tests/PippinCoreTests/BackendRouterTests.swift`: primary success, degraded
   fallback, and all-backends-failed behavior.
 - Each concrete module adds an integration test while the owning app is running,
@@ -78,15 +83,18 @@ it throws rather than returning a fabricated empty answer.
 
 ### 7. Wrong vs Correct
 
-Wrong: treat private schema and file layout as stable, then return an empty list
-when the open or query fails.
+Wrong: use `file:...?immutable=1` to bypass locks on a live store, or treat a
+`BUSY` returned during prepare as schema drift.
 
-Correct: resolve, probe, query with bindings, and either return real rows,
+Correct: open the ordinary path read-only with a bounded busy timeout, resolve
+and probe dynamically, query with bindings, and either return real rows,
 explicitly degrade to a known fallback, or fail actionably.
 
 ## Avoid
 
 - No writes, migrations, schema repair, or write-intent locks against another
   app's DB.
+- No `immutable=1`, URI construction, shared cache, or unbounded busy handler for
+  a live private store.
 - No SQL interpolation for values and no caller-controlled table names.
 - No conversion of permission/schema failures into zero rows.

@@ -30,6 +30,39 @@ struct SQLiteReaderTests {
             .appending(path: "pippin sqlite \(UUID().uuidString)", directoryHint: .isDirectory)
     }
 
+    private func openWriter(at path: String) throws -> OpaquePointer {
+        var handle: OpaquePointer?
+        guard sqlite3_open(path, &handle) == SQLITE_OK, let handle else {
+            sqlite3_close(handle)
+            throw PippinError(.backendUnavailable, detail: "test_sqlite")
+        }
+        return handle
+    }
+
+    private func execute(_ sql: String, on handle: OpaquePointer) throws {
+        guard sqlite3_exec(handle, sql, nil, nil, nil) == SQLITE_OK else {
+            throw PippinError(
+                .backendUnavailable,
+                detail: "test_sqlite",
+                hint: String(cString: sqlite3_errmsg(handle))
+            )
+        }
+    }
+
+    private func scalarString(_ sql: String, on handle: OpaquePointer) throws -> String {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(handle, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw PippinError(.backendUnavailable, detail: "test_sqlite")
+        }
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_step(statement) == SQLITE_ROW,
+              let value = sqlite3_column_text(statement, 0)
+        else {
+            throw PippinError(.backendUnavailable, detail: "test_sqlite")
+        }
+        return String(cString: value)
+    }
+
     @Test("reads rows with bound parameters")
     func parameterizedQuery() throws {
         let directory = temporaryDirectory()
@@ -78,6 +111,53 @@ struct SQLiteReaderTests {
             try reader.query("DELETE FROM messages") { _ in 0 }
         }
         #expect(try reader.query("SELECT count(*) FROM messages") { $0.int(at: 0) }.first == 3)
+    }
+
+    @Test("a long-lived read-only reader sees a later committed WAL write")
+    func observesCommittedWALWrite() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let path = directory.appending(path: "wal.db").path(percentEncoded: false)
+        let writer = try openWriter(at: path)
+        defer { sqlite3_close(writer) }
+
+        try execute("PRAGMA journal_mode=WAL", on: writer)
+        #expect(try scalarString("PRAGMA journal_mode", on: writer).lowercased() == "wal")
+        try execute("CREATE TABLE items (id INTEGER PRIMARY KEY); INSERT INTO items VALUES (1)", on: writer)
+
+        let reader = try SQLiteReader(path: path)
+        #expect(try reader.query("SELECT count(*) FROM items") { $0.int(at: 0) }.first == 1)
+
+        try execute("BEGIN IMMEDIATE; INSERT INTO items VALUES (2); COMMIT", on: writer)
+        #expect(try reader.query("SELECT count(*) FROM items") { $0.int(at: 0) }.first == 2)
+    }
+
+    @Test("rollback-journal lock contention fails within the bounded wait")
+    func contentionIsBounded() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let path = try makeDatabase(in: directory, name: "locked.db")
+        let writer = try openWriter(at: path)
+        defer {
+            _ = sqlite3_exec(writer, "ROLLBACK", nil, nil, nil)
+            sqlite3_close(writer)
+        }
+        try execute("PRAGMA journal_mode=DELETE; BEGIN EXCLUSIVE", on: writer)
+
+        let reader = try SQLiteReader(path: path)
+        let clock = ContinuousClock()
+        let started = clock.now
+        let error = #expect(throws: PippinError.self) {
+            try reader.query("SELECT count(*) FROM messages") { $0.int(at: 0) }
+        }
+        let elapsed = started.duration(to: clock.now)
+
+        #expect(error?.code == .backendUnavailable)
+        #expect(error?.detail == "sqlite")
+        #expect(error?.hint.contains("Retry") == true)
+        #expect(error?.hint.contains("fallback") == true)
+        #expect(elapsed < .milliseconds(750), "250 ms busy timeout exceeded the documented generous bound")
     }
 
     // MARK: Schema probe

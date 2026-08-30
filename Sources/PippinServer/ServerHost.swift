@@ -93,7 +93,7 @@ public actor ServerHost {
         guard sweepTask == nil else { return }
         sweepTask = Task { [weak self] in
             guard let self else { return }
-            let interval = await self.configuration.sweepInterval
+            let interval = self.configuration.sweepInterval
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(interval))
                 await self.sweepExpiredSessions()

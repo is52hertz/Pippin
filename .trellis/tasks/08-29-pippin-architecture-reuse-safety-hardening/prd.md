@@ -66,34 +66,34 @@ real Apple data modules depend on them.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** Source review confirms all JSON-RPC, SSE, protocol-version, and MCP
+- [x] **AC1** Source review confirms all JSON-RPC, SSE, protocol-version, and MCP
       transport-session behavior is supplied by swift-sdk; retained Pippin code
       is limited to host adaptation and product policy, with provenance comments
       and regression tests.
-- [ ] **AC2** Direct HTTP and shim initialize, `tools/list`, notifications, and
+- [x] **AC2** Direct HTTP and shim initialize, `tools/list`, notifications, and
       session DELETE continue to pass unchanged; only `pippin_status` is present
       in the production catalogue.
-- [ ] **AC3** `SQLiteReader` contains no `immutable=1`; a test proves a read-only
+- [x] **AC3** `SQLiteReader` contains no `immutable=1`; a test proves a read-only
       reader observes committed WAL-backed changes from a concurrent writer, and
       lock contention fails within a documented bound rather than hanging.
-- [ ] **AC4** Existing SQLite schema-probe, bound-parameter, dynamic-version,
+- [x] **AC4** Existing SQLite schema-probe, bound-parameter, dynamic-version,
       read-only, and no-silent-empty tests remain passing.
-- [ ] **AC5** AppleScript calls targeting the same App serialize; calls targeting
+- [x] **AC5** AppleScript calls targeting the same App serialize; calls targeting
       different Apps may proceed independently. Queue timeout, operation timeout,
       output overflow, cancellation, and child-process cleanup have deterministic
       tests that never invoke TCC data.
-- [ ] **AC6** No AppleScript argument is interpolated into source and no captured
+- [x] **AC6** No AppleScript argument is interpolated into source and no captured
       output above the configured ceiling is retained or returned.
-- [ ] **AC7** Any mutating call against an unwritable journal performs no
+- [x] **AC7** Any mutating call against an unwritable journal performs no
       mutation. Successful and failed attempts leave an intent entry with IDs
       plus an outcome when outcome append succeeds. A post-mutation outcome-log
       failure reports the real mutation result with `audit_degraded`, does not
       suggest retry, and prevents later mutations until recovery.
-- [ ] **AC8** Existing confirmation-token guarantees remain unchanged: TTL,
+- [x] **AC8** Existing confirmation-token guarantees remain unchanged: TTL,
       single-use, exact ID set, requesting session, tool binding, and item cap.
-- [ ] **AC9** No new dependency, production tool, TCC prompt, signing identity,
+- [x] **AC9** No new dependency, production tool, TCC prompt, signing identity,
       UI behavior, or externally bound listener is introduced.
-- [ ] **AC10** `swift build`, `swift test`, `git diff --check`, direct-HTTP/shim
+- [x] **AC10** `swift build`, `swift test`, `git diff --check`, direct-HTTP/shim
       parity, and an independent `trellis-check` pass.
 
 ## Constraints and Notes

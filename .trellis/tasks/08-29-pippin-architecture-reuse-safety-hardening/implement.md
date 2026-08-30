@@ -31,47 +31,47 @@ primitives only and adds no production module tools.
 
 ## Step 2 — Correct SQLite live-read semantics
 
-- [ ] Remove `immutable=1` and implement the G0 read-only/busy policy.
-- [ ] Add a WAL writer/reader fixture proving committed-change visibility and a
+- [x] Remove `immutable=1` and implement the G0 read-only/busy policy.
+- [x] Add a WAL writer/reader fixture proving committed-change visibility and a
       bounded contention failure.
-- [ ] Preserve dynamic version resolution, schema probe, bound values, and
+- [x] Preserve dynamic version resolution, schema probe, bound values, and
       explicit error/degradation behavior.
 - Validation: `SQLiteReaderTests`, `BackendRouterTests`, and source search proving
   no production `immutable=1` remains.
 
 ## Step 3 — Add AppleScript host-app budgets
 
-- [ ] Add per-target-App lanes and bounded queue wait.
-- [ ] Add bounded stdout/stderr capture without pipe deadlock.
-- [ ] Implement operation timeout/cancellation cleanup for the entire process
+- [x] Add per-target-App lanes and bounded queue wait.
+- [x] Add bounded stdout/stderr capture without pipe deadlock.
+- [x] Implement operation timeout/cancellation cleanup for the entire process
       group using the verified G0 strategy.
-- [ ] Keep stdin script/argv argument separation and existing error mapping.
+- [x] Keep stdin script/argv argument separation and existing error mapping.
 - Validation: same-target serialization, different-target concurrency, queue
   timeout, operation timeout, oversized output, cancellation, injection payload,
   and no-surviving-child tests.
 
 ## Step 4 — Make mutation intent durable
 
-- [ ] Split best-effort non-mutation entries from required mutation-intent append.
-- [ ] Add one `ToolContext.performMutation` sequence for ordinary writes and
+- [x] Split best-effort non-mutation entries from required mutation-intent append.
+- [x] Add one `ToolContext.performMutation` sequence for ordinary writes and
       confirmed destructive operations.
-- [ ] Route `ToolContext.confirmDestructive` through that owner after token
+- [x] Route `ToolContext.confirmDestructive` through that owner after token
       validation, then append outcome.
-- [ ] Fail closed with existing `backend_unavailable` / `audit_log` semantics if
+- [x] Fail closed with existing `backend_unavailable` / `audit_log` semantics if
       intent cannot be written.
-- [ ] On post-mutation outcome failure, return the real result with the frozen
+- [x] On post-mutation outcome failure, return the real result with the frozen
       `audit_degraded` marker and block later mutations until recovery.
-- [ ] Preserve token consumption, exact-ID binding, and private file modes.
+- [x] Preserve token consumption, exact-ID binding, and private file modes.
 - Validation: unwritable intent performs nothing; success/failure/crash-window
   simulations retain the intent; existing confirmation and rotation tests pass.
 
 ## Step 5 — Full-scope gate
 
-- [ ] Confirm `ProductionToolCatalogue` still exposes only `pippin_status`.
-- [ ] Run `swift build`, `swift test`, `git diff --check`, direct HTTP/shim parity,
+- [x] Confirm `ProductionToolCatalogue` still exposes only `pippin_status`.
+- [x] Run `swift build`, `swift test`, `git diff --check`, direct HTTP/shim parity,
       and tools/list budget checks.
-- [ ] Package the signed app without touching the identity and confirm no new TCC
+- [x] Package the signed app without touching the identity and confirm no new TCC
       prompt is triggered by these primitive-only changes.
-- [ ] Run independent `trellis-check`; update code specs only for durable
+- [x] Run independent `trellis-check`; update code specs only for durable
       contracts learned during implementation.
-- [ ] Re-run AC1–AC10 and record evidence in this task's `research/` directory.
+- [x] Re-run AC1–AC10 and record evidence in this task's `research/` directory.
