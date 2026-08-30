@@ -129,3 +129,26 @@ Completed and archived bootstrap guidelines; recorded upstream MCP/macOS audit; 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 6: Pippin architecture reuse and safety hardening
+
+**Date**: 2026-08-30
+**Task**: Pippin architecture reuse and safety hardening
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Completed SDK host alignment, honest live SQLite reads, per-App bounded AppleScript process-group execution, durable mutation intent, full signed-app/shim verification, spec sync, and task archive.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `89b4d32` | (see git log) |
+| `93a5a63` | (see git log) |
+| `414b3ee` | (see git log) |
+
+### Status
+
+[OK] **Completed**

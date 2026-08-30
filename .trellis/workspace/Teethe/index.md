@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 5
-- **Last Active**: 2026-08-29
+- **Total Sessions**: 6
+- **Last Active**: 2026-08-30
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~131 | Active |
+| `journal-1.md` | ~154 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 6 | 2026-08-30 | Pippin architecture reuse and safety hardening | `89b4d32`, `93a5a63`, `414b3ee` | `feat/pippin-skeleton-transport` |
 | 5 | 2026-08-29 | Bootstrap specs and architecture reuse audit | `ea718c4`, `e9f4596` | `feat/pippin-skeleton-transport` |
 | 4 | 2026-08-25 | Pippin Step 8 HIG redesign and verification | `922b9e7` | `feat/pippin-skeleton-transport` |
 | 3 | 2026-08-24 | Pippin Step 8 permission onboarding | `acfdcff` | `feat/pippin-skeleton-transport` |
