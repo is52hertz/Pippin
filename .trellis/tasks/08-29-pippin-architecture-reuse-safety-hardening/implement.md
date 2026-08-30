@@ -21,10 +21,10 @@ primitives only and adds no production module tools.
 
 ## Step 1 — Minimize the HTTP host adapter
 
-- [ ] Add exact upstream provenance and retained-deviation notes.
-- [ ] Remove only protocol/session/framing behavior demonstrably duplicated by
+- [x] Add exact upstream provenance and retained-deviation notes.
+- [x] Remove only protocol/session/framing behavior demonstrably duplicated by
       a public SDK API; keep socket adaptation and Pippin policy.
-- [ ] Preserve bearer/Origin handling, token-session pinning, session cleanup,
+- [x] Preserve bearer/Origin handling, token-session pinning, session cleanup,
       standalone SSE notifications, and shared resident state.
 - Validation: focused `PippinServerTests`, direct HTTP initialize/tools/list,
   notification, and DELETE checks.

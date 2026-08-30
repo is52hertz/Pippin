@@ -8,9 +8,19 @@ import PippinCore
 
 /// The loopback HTTP/1.1 listener.
 ///
-/// The MCP SDK ships no HTTP server: `StatefulHTTPServerTransport` is an
-/// `HTTPRequest → HTTPResponse` handler and binds nothing. This is the missing
-/// half, adapted from the SDK's own conformance server (parent decision O4).
+/// The public `MCP` product has no importable socket or multi-session host:
+/// `StatefulHTTPServerTransport` is an `HTTPRequest → HTTPResponse` handler and
+/// binds nothing. This socket/type adapter follows the conformance `HTTPApp` from
+/// swift-sdk 0.12.1, commit `a0ae212ebf6eab5f754c3129608bc5557637e605`;
+/// that host is part of the non-importable `MCPConformanceServer` executable.
+///
+/// Retained Pippin deviations are product policy or framework adaptation:
+/// loopback-only binding with configured-port fallback, exact endpoint matching,
+/// repeated-header joining, immediate SSE chunk flushing, and off-main dispatch
+/// stay here. `ServerHost` retains authentication-before-routing, bearer/session
+/// and capability pinning, resident shared state, per-session tool policy,
+/// expiry, list-changed notifications, and status. JSON-RPC, protocol validation,
+/// SSE/resumability, and each transport session remain owned by the SDK.
 public actor HTTPListener {
     private let host: String
     private let requestedPort: Int

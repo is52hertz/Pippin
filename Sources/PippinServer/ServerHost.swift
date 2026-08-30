@@ -153,7 +153,9 @@ public actor ServerHost {
             sessions[sessionID] = session
 
             let response = await session.transport.handleRequest(request)
-            if request.method == "DELETE" {
+            // Match swift-sdk 0.12.1's conformance host: a failed DELETE has not
+            // terminated the SDK transport and must leave the routing entry live.
+            if request.method == "DELETE", response.statusCode == 200 {
                 await closeSession(sessionID)
             }
             return response
@@ -178,10 +180,17 @@ public actor ServerHost {
     }
 
     private func isInitialize(_ request: HTTPRequest) -> Bool {
+        // Routing-only equivalent of swift-sdk 0.12.1's package-scoped
+        // JSONRPCMessageKind. Do not decode Request<Initialize> here: the body
+        // must reach StatefulHTTPServerTransport unchanged so the SDK remains
+        // the sole owner of JSON-RPC and initialize parameter validation.
         guard let body = request.body,
-              let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+              let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
+              json["method"] as? String == Initialize.name
         else { return false }
-        return json["method"] as? String == "initialize"
+
+        if json["id"] as? String != nil { return true }
+        return json["id"] as? Int != nil
     }
 
     // MARK: - Sessions

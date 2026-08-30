@@ -56,6 +56,7 @@ struct ServerHostTests {
         method: String = "POST",
         token: String?,
         sessionID: String? = nil,
+        origin: String? = nil,
         body: String? = Self.initializeBody
     ) -> HTTPRequest {
         var headers = [
@@ -64,6 +65,7 @@ struct ServerHostTests {
         ]
         if let token { headers["Authorization"] = "Bearer \(token)" }
         if let sessionID { headers["Mcp-Session-Id"] = sessionID }
+        if let origin { headers["Origin"] = origin }
         return HTTPRequest(
             method: method,
             headers: headers,
@@ -138,6 +140,49 @@ struct ServerHostTests {
         #expect(await host.sessionCount == 1)
     }
 
+    @Test("initialize without a request id is rejected before session creation")
+    func initializeWithoutIDDoesNotOpenSession() async {
+        let host = makeHost()
+        let response = await host.handle(
+            request(
+                token: Self.broadToken,
+                body: #"{"jsonrpc":"2.0","method":"initialize","params":{}}"#
+            )
+        )
+
+        #expect(response.statusCode == 400)
+        #expect(sessionID(of: response) == nil)
+        #expect(
+            String(decoding: response.bodyData ?? Data(), as: UTF8.self)
+                .contains("Missing Mcp-Session-Id header")
+        )
+        #expect(await host.sessionCount == 0)
+    }
+
+    @Test("initialize routing leaves malformed parameters for the SDK to validate")
+    func malformedInitializeParametersReachSDK() async throws {
+        let host = makeHost()
+        let response = await host.handle(
+            request(
+                token: Self.broadToken,
+                body: #"{"jsonrpc":"2.0","id":"route-me","method":"initialize","params":[]}"#
+            )
+        )
+
+        let openedSessionID = try #require(sessionID(of: response))
+        guard case .stream(let stream, _) = response else {
+            Issue.record("Expected the SDK transport to stream its protocol response")
+            return
+        }
+
+        let responseText = try await text(in: stream)
+        #expect(responseText.contains(#""id":"route-me""#))
+        #expect(responseText.contains(#""error""#))
+        #expect(await host.sessionCount == 1)
+        #expect(!openedSessionID.isEmpty)
+        await host.shutdown()
+    }
+
     @Test("two clients are served by one host")
     func twoConcurrentSessions() async throws {
         let host = makeHost()
@@ -178,13 +223,33 @@ struct ServerHostTests {
         #expect(response.statusCode == 400)
     }
 
-    @Test("DELETE closes the session")
-    func deleteClosesSession() async throws {
+    @Test("only a successful DELETE closes the session")
+    func onlySuccessfulDeleteClosesSession() async throws {
         let host = makeHost()
         let sessionID = try await openSession(on: host, token: Self.broadToken)
         #expect(await host.sessionCount == 1)
 
-        _ = await host.handle(request(method: "DELETE", token: Self.broadToken, sessionID: sessionID, body: nil))
+        let failedRequest = request(
+            method: "DELETE",
+            token: Self.broadToken,
+            sessionID: sessionID,
+            origin: "https://example.com",
+            body: nil
+        )
+        let failedResponse = await host.handle(failedRequest)
+
+        #expect(failedResponse.statusCode == 403)
+        #expect(await host.sessionCount == 1)
+
+        let successfulResponse = await host.handle(
+            request(
+                method: "DELETE",
+                token: Self.broadToken,
+                sessionID: sessionID,
+                body: nil
+            )
+        )
+        #expect(successfulResponse.statusCode == 200)
         #expect(await host.sessionCount == 0)
     }
 
