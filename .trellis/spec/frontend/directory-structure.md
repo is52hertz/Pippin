@@ -1,54 +1,20 @@
-# Directory Structure
+# App Directory Structure
 
-> How frontend code is organized in this project.
+`Sources/PippinApp` is organized by responsibility:
 
----
+- `App/` owns the SwiftUI entry point and application/window integration.
+  `App/PippinApp.swift` declares `MenuBarExtra`, the Settings window, and commands.
+- `Runtime/` owns async service lifecycle. `Runtime/ServerRuntime.swift` composes
+  `ServerHost` and `HTTPListener` and publishes `AppRuntimeSnapshot`.
+- `Presentation/` holds UI-facing projections such as
+  `PippinPresentationModel`, `MenuBarPresentation`, and
+  `PermissionActionPresentation`.
+- `MenuBar/` and `Settings/` contain feature views. Current entry views are
+  `PippinMenuView` and `PippinSettingsView`; settings are split into focused pane
+  and row files rather than one monolith.
+- `SharedUI/` contains controls used across app surfaces; `PreviewSupport/`
+  contains preview-only runtime support.
 
-## Overview
-
-<!--
-Document your project's frontend directory structure here.
-
-Questions to answer:
-- Where do components live?
-- How are features/modules organized?
-- Where are shared utilities?
-- How are assets organized?
--->
-
-(To be filled by the team)
-
----
-
-## Directory Layout
-
-```
-<!-- Replace with your actual structure -->
-src/
-├── ...
-└── ...
-```
-
----
-
-## Module Organization
-
-<!-- How should new features be organized? -->
-
-(To be filled by the team)
-
----
-
-## Naming Conventions
-
-<!-- File and folder naming rules -->
-
-(To be filled by the team)
-
----
-
-## Examples
-
-<!-- Link to well-organized modules as examples -->
-
-(To be filled by the team)
+Keep backend DTOs and safety logic in `PippinCore`/`PippinServer`. Do not place
+service ownership in a view, production behavior in preview support, or one-off
+feature controls in `SharedUI`.

@@ -1,59 +1,19 @@
-# Component Guidelines
+# SwiftUI Component Guidelines
 
-> How components are built in this project.
+- Compose scenes at `PippinApp`: the menu bar receives
+  `PippinMenuView(model: delegate.model)` and the Settings window receives
+  `PippinSettingsView(model: delegate.model)`. Pass the shared presentation model
+  explicitly rather than resolving server globals inside views.
+- Keep feature views under `MenuBar/` or `Settings/`; split settings by pane,
+  section, and reusable row as the existing filenames demonstrate.
+- Derive visible labels and symbols from presentation values. The menu-bar label
+  uses `menuBarPresentation.accessibilityLabel` and `symbolName`, with
+  `.labelStyle(.iconOnly)` preserving an accessible text label.
+- Use native scene behavior deliberately: Settings has a stable window ID,
+  suppressed default launch, a concrete default size, and content-minimum
+  resizing; the Settings command uses the conventional Command-Comma shortcut.
+- Keep async lifecycle and persistence out of `body`; views send intent to the
+  presentation model and render its snapshot.
 
----
-
-## Overview
-
-<!--
-Document your project's component conventions here.
-
-Questions to answer:
-- What component patterns do you use?
-- How are props defined?
-- How do you handle composition?
-- What accessibility standards apply?
--->
-
-(To be filled by the team)
-
----
-
-## Component Structure
-
-<!-- Standard structure of a component file -->
-
-(To be filled by the team)
-
----
-
-## Props Conventions
-
-<!-- How props should be defined and typed -->
-
-(To be filled by the team)
-
----
-
-## Styling Patterns
-
-<!-- How styles are applied (CSS modules, styled-components, Tailwind, etc.) -->
-
-(To be filled by the team)
-
----
-
-## Accessibility
-
-<!-- A11y requirements and patterns -->
-
-(To be filled by the team)
-
----
-
-## Common Mistakes
-
-<!-- Component-related mistakes your team has made -->
-
-(To be filled by the team)
+Avoid giant settings views, duplicated status-to-symbol logic, hidden service
+singletons, and icon-only controls without an accessibility label.

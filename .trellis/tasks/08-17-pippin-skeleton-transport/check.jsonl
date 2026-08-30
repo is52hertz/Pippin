@@ -1,0 +1,7 @@
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/prd.md", "reason": "Cross-child acceptance criteria A1-A7 that this child feeds"}
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/design.md", "reason": "Invariants to verify against: loopback-only bind, no predicate delete, tool-absence gating, no silent empty results, no AppleScript string interpolation"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/research/shim-transport-surface.md", "reason": "Source-backed Step 7 transport contract and required edge matrix"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/research/step7-shim-verification.md", "reason": "Step 7 implementation, automated verification, signing, Codex stdio smoke, and deferred Claude evidence"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/research/step8-gui-permissions.md", "reason": "Verify honest permission states, no prompting, native Settings behavior, and HIG contract"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/research/step8-gui-verification.md", "reason": "Step 8 build, test, signing, runtime, HIG review, and remaining visual evidence"}
+{"file": ".trellis/tasks/08-17-pippin-skeleton-transport/research/step8-ui-architecture.md", "reason": "Verify the visual redesign and source migration against the approved HIG scope and non-functional placeholder boundary"}

@@ -1,51 +1,24 @@
-# Quality Guidelines
+# App Quality Guidelines
 
-> Code quality standards for frontend development.
+- Keep SwiftUI work on the UI isolation domain and service traffic in actors;
+  `HTTPListener` explicitly avoids the main actor so MCP traffic cannot block UI.
+- Preserve accessibility text for icon-only menu and toolbar controls. Prefer
+  native controls, keyboard conventions, and semantic labels.
+- Test presentation and runtime behavior through protocols/snapshots rather than
+  launching real listeners or requesting real TCC permissions. App tests belong
+  in `Tests/PippinAppTests`; core/server behavior remains in its owning target.
+- For settings changes, test success, validation/persistence failure, host update,
+  and the rule that the presented mirror advances only after success.
+- Keep preview-only substitutes under `PreviewSupport/` and out of production
+  runtime ownership.
 
----
+Verification commands:
 
-## Overview
+```bash
+swift test --filter PippinAppTests
+swift test
+swift build
+```
 
-<!--
-Document your project's quality standards here.
-
-Questions to answer:
-- What patterns are forbidden?
-- What linting rules do you enforce?
-- What are your testing requirements?
-- What code review standards apply?
--->
-
-(To be filled by the team)
-
----
-
-## Forbidden Patterns
-
-<!-- Patterns that should never be used and why -->
-
-(To be filled by the team)
-
----
-
-## Required Patterns
-
-<!-- Patterns that must always be used -->
-
-(To be filled by the team)
-
----
-
-## Testing Requirements
-
-<!-- What level of testing is expected -->
-
-(To be filled by the team)
-
----
-
-## Code Review Checklist
-
-<!-- What reviewers should check -->
-
-(To be filled by the team)
+No separate linter is configured. Review scene accessibility, actor isolation,
+and error copy manually when those areas change.

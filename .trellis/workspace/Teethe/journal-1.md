@@ -5,3 +5,150 @@
 
 ---
 
+
+
+## Session 1: Pippin planning: task tree, addendum integration, skeleton activation
+
+**Date**: 2026-08-18
+**Task**: Pippin planning: task tree, addendum integration, skeleton activation
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Planned the Pippin macOS MCP server as a parent task plus three batch-one children, folded the side-session addendum (O1-O3 answers, Shortcuts module, roadmap) into the parent artifacts, activated the skeleton child, and recorded step-0 environment findings.
+
+### Main Changes
+
+- Initial repo commit: agent workflow scaffolding plus .gitignore
+- Created parent 08-17-pippin-mcp-server and children skeleton-transport / reminders-crud / mail-read-search with full prd+design+implement artifacts
+- Closed O1 (swift-sdk approved), O2 (free-tier self-signed identity), O3 (batch-one tools/list budget 4KB -> 6KB)
+- Shortcuts elevated to a batch-two user-curated module; escape hatch dropped to batch three; Health (via Exporter) and remote-access token tiers recorded as positions 7 and 8
+- Skeleton gained S9/AC11: token validation resolves to a capability set and the registry takes (Config, Capabilities), so batch-four token tiers need no rework
+- Roadmap for batches 2-4 appended to parent prd; Screen Time scheduled early because knowledgeC.db has a ~4-week rolling window
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] task.py validate passes on all four tasks
+- [OK] Toolchain verified: macOS 26.5.1 / Xcode 26.5 / SDK 26.5 / Swift 6.3.2
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Finish implement.md step 0: resolve swift-sdk version and confirm the API surface
+- Stop condition: if the SDK exposes no per-request session id, revise confirm-token session binding in the parent design before writing tools
+- Then step 1 (Package.swift skeleton) and step 2 (packaging + setup_dev_signing.sh, self-signed only) to reach gate G1
+
+
+## Session 2: Pippin skeleton Step 8 native GUI
+
+**Date**: 2026-08-23
+**Task**: Pippin skeleton Step 8 native GUI
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Implemented honest non-prompting permission reporting, native menu-bar and Settings UI, atomic config application, tests, signed-bundle runtime evidence, and independent Trellis review. Step 9 remains; final user visual confirmation is recorded as pending.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `11599ae` | (see git log) |
+
+### Status
+
+[OK] **Completed**
+
+
+## Session 3: Pippin Step 8 permission onboarding
+
+**Date**: 2026-08-24
+**Task**: Pippin Step 8 permission onboarding
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Separated passive permission status from explicit user actions, fixed LSUIElement Settings activation, added state-specific Reminders and Mail onboarding, verified 193 tests and the stable signed bundle, and recorded the remaining visual HIG debt.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `acfdcff` | (see git log) |
+
+### Status
+
+[OK] **Completed**
+
+
+## Session 4: Pippin Step 8 HIG redesign and verification
+
+**Date**: 2026-08-25
+**Task**: Pippin Step 8 HIG redesign and verification
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Completed Step 8D with deterministic DEBUG previews, a fixed-ID standard Settings window, functional native sidebar toggle, signed-app manual HIG verification, durable frontend guidance, and explicit VoiceOver deferral. Skeleton task remains in progress for Step 9.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `922b9e7` | (see git log) |
+
+### Status
+
+[OK] **Completed**
+
+
+## Session 5: Bootstrap specs and architecture reuse audit
+
+**Date**: 2026-08-29
+**Task**: Bootstrap specs and architecture reuse audit
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Completed and archived bootstrap guidelines; recorded upstream MCP/macOS audit; planned a P0 shared-primitives hardening prerequisite for Reminders and Mail without starting implementation.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ea718c4` | (see git log) |
+| `e9f4596` | (see git log) |
+
+### Status
+
+[OK] **Completed**
+
+
+## Session 6: Pippin architecture reuse and safety hardening
+
+**Date**: 2026-08-30
+**Task**: Pippin architecture reuse and safety hardening
+**Branch**: `feat/pippin-skeleton-transport`
+
+### Summary
+
+Completed SDK host alignment, honest live SQLite reads, per-App bounded AppleScript process-group execution, durable mutation intent, full signed-app/shim verification, spec sync, and task archive.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `89b4d32` | (see git log) |
+| `93a5a63` | (see git log) |
+| `414b3ee` | (see git log) |
+
+### Status
+
+[OK] **Completed**

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pippin Step 9 · 验收清单</title>
+<style>
+  :root { --bg:#f5f5f7; --card:#fff; --text:#1d1d1f; --muted:#6e6e73;
+    --line:#e3e3e6; --pass:#34c759; --blocked:#ff9f0a; --open:#8e8e93; }
+  @media (prefers-color-scheme:dark) { :root { --bg:#1c1c1e; --card:#2c2c2e;
+    --text:#f5f5f7; --muted:#98989d; --line:#3a3a3c; --pass:#30d158;
+    --blocked:#ffd60a; --open:#98989d; } }
+  * { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; }
+  main { max-width:880px; margin:auto; padding:28px 20px 72px; }
+  header { margin-bottom:20px } h1 { font-size:22px; margin:0 0 4px }
+  .sub,.note { color:var(--muted) } section { background:var(--card);
+    border:1px solid var(--line); border-radius:14px; margin:0 0 16px; overflow:hidden; }
+  h2 { font-size:15px; margin:0; padding:13px 16px; border-bottom:1px solid var(--line); }
+  .item { display:grid; grid-template-columns:92px 1fr; gap:12px; padding:11px 16px;
+    border-top:1px solid var(--line); } .item:first-of-type { border-top:0 }
+  .status { font-size:12px; font-weight:700 } .pass { color:var(--pass) }
+  .blocked { color:var(--blocked) } .open { color:var(--open) }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px }
+  footer { color:var(--muted); font-size:12px; text-align:center; margin-top:24px }
+</style>
+</head>
+<body><main>
+  <header>
+    <h1>Pippin Step 9 · 验收清单</h1>
+    <div class="sub">骨架全范围集成 · 2026-08-28 · 基于项目手测清单模板的静态证据快照</div>
+  </header>
+
+  <section><h2>1 · 构建与稳定签名</h2>
+    <div class="item"><div class="status pass">✓ 通过</div><div>Debug、Release、201 项测试及三次连续打包均通过。</div></div>
+    <div class="item"><div class="status pass">✓ 通过</div><div>三轮证书 SHA-1、SHA-256、Authority、Bundle ID 与 designated requirement 完全一致。</div></div>
+    <div class="item"><div class="status pass">✓ 通过</div><div>用户确认三轮期间没有出现新的 Reminders、Automation 或 Full Disk Access 提示；被动权限快照与既有 grant 均保持可用。</div></div>
+  </section>
+
+  <section><h2>2 · Transport 与单一状态所有者</h2>
+    <div class="item"><div class="status pass">✓ 通过</div><div>两个独立 shim 客户端同时连接；唯一一个签名 Pippin 进程报告 <code>sessions=2</code>。</div></div>
+    <div class="item"><div class="status pass">✓ 通过</div><div>两端 <code>tools/list</code> 与模块状态一致；共享配置变化向受影响会话发送 <code>list_changed</code>。</div></div>
+    <div class="item"><div class="status pass">✓ 通过</div><div>认证、Origin、loopback bind、SSE/session framing 和 bounded failure 回归全部通过。</div></div>
+  </section>
+
+  <section><h2>3 · 客户端兼容性</h2>
+    <div class="item"><div class="status pass">✓ 通过</div><div>Codex 经 bundled stdio shim 调用 <code>pippin_status 0.1.0</code>。</div></div>
+    <div class="item"><div class="status pass">✓ 通过</div><div>Codex 经直接 Streamable HTTP 调用 <code>pippin_status 0.1.0</code>，token 未持久化或输出。</div></div>
+    <div class="item"><div class="status blocked">⚠ 阻塞</div><div>Claude Code 已安装但未登录，且没有 Anthropic API key；HTTP 与 shim 实测等待外部账号恢复。</div></div>
+  </section>
+
+  <section><h2>4 · 安全与产品约束</h2>
+    <div class="item"><div class="status pass">✓ 通过</div><div>确认 token 生命周期、结构化 write gating、token tiers、工具预算和参数化后端测试通过。</div></div>
+    <div class="item"><div class="status pass">✓ 通过</div><div>没有新增依赖、模块工具、远程入口、生命周期行为或签名材料。</div></div>
+    <div class="item"><div class="status pass">✓ 通过</div><div>bearer token 未进入仓库、命令参数、持久配置、日志或证据。</div></div>
+  </section>
+
+  <footer>当前结论：AC1、AC2、AC4–AC11 通过；仅 AC3 因 Claude Code 外部凭据阻塞。</footer>
+</main></body>
+</html>

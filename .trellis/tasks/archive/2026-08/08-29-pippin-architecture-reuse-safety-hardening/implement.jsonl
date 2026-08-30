@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/backend/security-and-transport.md", "reason": "MCP trust boundary, thin adapter, capability gating, and durable mutation contracts"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Live private SQLite read and degradation rules"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Stable PippinError wire semantics"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Concurrency and safety-path testing requirements"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "End-to-end transport, mutation, and private-store flow"}
+{"file": ".trellis/tasks/08-17-pippin-mcp-server/design.md", "reason": "Inherited cross-module architecture and safety decisions"}
+{"file": ".trellis/tasks/08-29-pippin-architecture-reuse-safety-hardening/research/implementation-brief.md", "reason": "Injection-sized Keep/Replace/Reference decisions and implementation gates"}

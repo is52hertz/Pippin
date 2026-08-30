@@ -10,3 +10,36 @@ Package.resolved.bak
 *.xcuserdatad/
 xcuserdata/
 DerivedData/
+
+# Build output (assembled .app bundle)
+build/
+
+# ---------------------------------------------------------------------------
+# Signing material and secrets — NEVER commit.
+#
+# This repository is intended to be public. Scripts/setup_dev_signing.sh creates
+# a signing identity directly in the login keychain and exports nothing, so
+# nothing here should ever exist in the working tree. These rules are the
+# backstop for a mistake, not a description of normal operation: a leaked
+# signing key lets anyone produce a binary macOS trusts as Pippin, and any TCC
+# grant the user has given would extend to it.
+# ---------------------------------------------------------------------------
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+*.key
+*.pem
+*.keychain
+*.keychain-db
+*.mobileprovision
+*.provisionprofile
+Certs/
+Keys/
+secrets/
+.env
+.env.*
+
+# Runtime state written by the app (contains the bearer token)
+endpoint.json

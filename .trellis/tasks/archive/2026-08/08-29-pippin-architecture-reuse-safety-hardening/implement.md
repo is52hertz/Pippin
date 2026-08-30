@@ -1,0 +1,77 @@
+# Architecture Reuse and Safety Hardening — Execution Plan
+
+Prerequisite for the Reminders and Mail children. This task changes shared
+primitives only and adds no production module tools.
+
+## Step 0 — Freeze upstream and OS contracts · Gate G0
+
+- [x] Re-check the exact swift-sdk 0.12.1 `StatefulHTTPServerTransport`,
+      `HTTPClientTransport`, `StdioTransport`, conformance `HTTPApp`, and package
+      products against `research/upstream-reuse-audit.md`.
+- [x] Diff Pippin's listener/session host against the conformance host and list
+      every retained deviation with its Pippin policy reason.
+- [x] Verify SQLite read-only/WAL/busy semantics against SQLite primary docs and
+      a scratch fixture; freeze the target open flags and timeout.
+- [x] Verify a race-safe Darwin process-group creation and kill strategy without
+      adding a dependency. Stop if the guarantee cannot be implemented honestly.
+- [x] Freeze the shared mutation-journal order, recovery probe, and compact
+      post-mutation `audit_degraded` envelope without adding an error code.
+- **G0: PASS (2026-08-30).** Updated `design.md` with measured/verified details
+  and obtained independent review before production edits.
+
+## Step 1 — Minimize the HTTP host adapter
+
+- [x] Add exact upstream provenance and retained-deviation notes.
+- [x] Remove only protocol/session/framing behavior demonstrably duplicated by
+      a public SDK API; keep socket adaptation and Pippin policy.
+- [x] Preserve bearer/Origin handling, token-session pinning, session cleanup,
+      standalone SSE notifications, and shared resident state.
+- Validation: focused `PippinServerTests`, direct HTTP initialize/tools/list,
+  notification, and DELETE checks.
+
+## Step 2 — Correct SQLite live-read semantics
+
+- [x] Remove `immutable=1` and implement the G0 read-only/busy policy.
+- [x] Add a WAL writer/reader fixture proving committed-change visibility and a
+      bounded contention failure.
+- [x] Preserve dynamic version resolution, schema probe, bound values, and
+      explicit error/degradation behavior.
+- Validation: `SQLiteReaderTests`, `BackendRouterTests`, and source search proving
+  no production `immutable=1` remains.
+
+## Step 3 — Add AppleScript host-app budgets
+
+- [x] Add per-target-App lanes and bounded queue wait.
+- [x] Add bounded stdout/stderr capture without pipe deadlock.
+- [x] Implement operation timeout/cancellation cleanup for the entire process
+      group using the verified G0 strategy.
+- [x] Keep stdin script/argv argument separation and existing error mapping.
+- Validation: same-target serialization, different-target concurrency, queue
+  timeout, operation timeout, oversized output, cancellation, injection payload,
+  and no-surviving-child tests.
+
+## Step 4 — Make mutation intent durable
+
+- [x] Split best-effort non-mutation entries from required mutation-intent append.
+- [x] Add one `ToolContext.performMutation` sequence for ordinary writes and
+      confirmed destructive operations.
+- [x] Route `ToolContext.confirmDestructive` through that owner after token
+      validation, then append outcome.
+- [x] Fail closed with existing `backend_unavailable` / `audit_log` semantics if
+      intent cannot be written.
+- [x] On post-mutation outcome failure, return the real result with the frozen
+      `audit_degraded` marker and block later mutations until recovery.
+- [x] Preserve token consumption, exact-ID binding, and private file modes.
+- Validation: unwritable intent performs nothing; success/failure/crash-window
+  simulations retain the intent; existing confirmation and rotation tests pass.
+
+## Step 5 — Full-scope gate
+
+- [x] Confirm `ProductionToolCatalogue` still exposes only `pippin_status`.
+- [x] Run `swift build`, `swift test`, `git diff --check`, direct HTTP/shim parity,
+      and tools/list budget checks.
+- [x] Package the signed app without touching the identity and confirm no new TCC
+      prompt is triggered by these primitive-only changes.
+- [x] Run independent `trellis-check`; update code specs only for durable
+      contracts learned during implementation.
+- [x] Re-run AC1–AC10 and record evidence in this task's `research/` directory.
